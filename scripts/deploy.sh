@@ -7,6 +7,9 @@ set -euo pipefail
 NAME="${CONTAINER_NAME:-trivo}"
 HOST_PORT="${HOST_PORT:-9028}"
 ENV_FILE="${ENV_FILE:-/opt/trivo/.env}"
+# Open Payments private key: lives only on the server and is mounted read-only.
+# In /opt/trivo/.env use OPEN_PAYMENTS_PRIVATE_KEY_PATH=/run/secrets/open_payments.key
+KEY_FILE="${KEY_FILE:-/opt/trivo/open_payments.key}"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Missing $ENV_FILE (runtime configuration is kept on the server, never in git)." >&2
@@ -19,8 +22,13 @@ echo "Pulling $IMAGE"
 docker pull "$IMAGE"
 
 start() {
+  local mounts=()
+  if [ -f "$KEY_FILE" ]; then
+    mounts=(-v "$KEY_FILE:/run/secrets/open_payments.key:ro")
+  fi
   docker run -d --name "$NAME" --restart unless-stopped \
-    -p "$HOST_PORT:9028" --env-file "$ENV_FILE" "$1" >/dev/null
+    -p "$HOST_PORT:9028" --env-file "$ENV_FILE" \
+    ${mounts[@]+"${mounts[@]}"} "$1" >/dev/null
 }
 
 wait_healthy() {

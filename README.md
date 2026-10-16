@@ -24,8 +24,11 @@ docker compose up -d db               # Postgres 16 on localhost:5432
 docker compose run --rm migrate       # apply Prisma migrations
 docker compose up --build app         # http://localhost:9028
 docker compose logs -f app            # follow logs
+
 docker compose down                   # stop (add -v to wipe the database)
 ```
+
+The database is also reachable from your machine on port **5433** (`DB_PORT` changes it), e.g. `DATABASE_URL=postgresql://trivo:trivo@localhost:5433/trivo`. If Docker says the port is not available, pick another one: `DB_PORT=5434 docker compose up -d db`.
 
 Run the published image instead of building it:
 
@@ -42,6 +45,10 @@ docker run --rm -p 9028:9028 ghcr.io/juanma1015/trivo:latest
 | `npm run build`      | Production build (standalone output)            |
 | `npm run db:migrate` | Apply Prisma migrations to `DATABASE_URL`       |
 | `npm run db:studio`  | Browse the database with Prisma Studio          |
+
+## Open Payments
+
+Two rails, chosen with `COBROS_RAIL`: `demo` (simulated payment, default) and `open-payments` (real payments on the Interledger testnet). Flow, configuration and security notes: [docs/OPEN-PAYMENTS.md](docs/OPEN-PAYMENTS.md).
 
 ## CI/CD
 

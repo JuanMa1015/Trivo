@@ -62,11 +62,15 @@ nano /opt/trivo/.env        # runtime config, never committed
 chmod 600 /opt/trivo/.env
 ```
 
+The Open Payments private key goes in `/opt/trivo/open_payments.key` (`chmod 644`, inside `/opt/trivo` with `chmod 700`); `scripts/deploy.sh` mounts it read-only at `/run/secrets/open_payments.key`. See [OPEN-PAYMENTS.md](OPEN-PAYMENTS.md).
+
 `/opt/trivo/.env` holds plain `KEY=value` lines (docker `--env-file` does not strip quotes):
 
 ```
 COBROS_STORE=postgres
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres
+COBROS_RAIL=open-payments
+CONFIRMACION_SECRETO=<64 hex characters, see docs/OPEN-PAYMENTS.md>
 ```
 
 The app listens on port **9028**. Open it in the firewall only if you serve it directly; behind a reverse proxy, keep it on localhost.
