@@ -7,7 +7,7 @@ Workflow: [.github/workflows/ci-cd.yml](../.github/workflows/ci-cd.yml).
 | Job           | Runs on             | What it checks or does                                                           |
 | ------------- | ------------------- | -------------------------------------------------------------------------------- |
 | `ci`          | every PR and push   | lint, types, format, unit tests, production build                                |
-| `integration` | every PR and push   | applies `db/migrations/*.sql` to a throwaway Postgres and runs its tests         |
+| `integration` | every PR and push   | runs `prisma migrate deploy` on a throwaway Postgres and runs its tests          |
 | `docker`      | every PR and push   | the image builds                                                                 |
 | `publish`     | push to `main` only | builds and pushes `ghcr.io/<owner>/<repo>` (tags `sha-<short>` and `latest`)     |
 | `deploy`      | after `publish`     | SSH to the server, pull by digest, replace the container, roll back if unhealthy |
@@ -70,6 +70,33 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres
 ```
 
 The app listens on port **9028**. Open it in the firewall only if you serve it directly; behind a reverse proxy, keep it on localhost.
+
+## Images in GitHub Packages
+
+Images are published to `ghcr.io/juanma1015/trivo`. The `org.opencontainers.image.source` label (in the Dockerfile and added by the metadata action) links the package to this repository, so it shows under **Packages** in the repo sidebar after the first publish.
+
+| Tag            | Published when           |
+| -------------- | ------------------------ |
+| `sha-abc1234`  | every merge to `main`    |
+| `latest`       | every merge to `main`    |
+| `1.2.3`, `1.2` | a `v1.2.3` tag is pushed |
+
+```bash
+git switch main && git pull --ff-only
+git tag v0.1.0
+git push origin v0.1.0
+docker pull ghcr.io/juanma1015/trivo:0.1.0
+```
+
+## Database migrations
+
+Migrations live in `prisma/migrations` and are applied explicitly, never at app start. From your machine, with the **direct** Supabase connection string (not the transaction pooler):
+
+```bash
+DATABASE_URL="postgresql://..." npm run db:migrate
+```
+
+To change the model: edit `prisma/schema.prisma`, run `npm run db:migrate:dev -- --name <change>` against a local database, review the generated SQL and commit it.
 
 ## Rollback
 

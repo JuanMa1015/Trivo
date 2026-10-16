@@ -172,9 +172,9 @@ Entregables útiles: sistema de componentes responsive (móvil, tablet, escritor
 
 ## 12. Arquitectura técnica (resumen para diseñadores y desarrolladores)
 
-- **Stack:** Next.js 16 (App Router, Cache Components), React 19, TypeScript estricto, Tailwind v4, zod, Vitest, ESLint, Prettier. Base de datos: Supabase (Postgres) accedido con SQL directo y el driver `pg` (sin ORM; Prisma se descartó).
+- **Stack:** Next.js 16 (App Router, Cache Components), React 19, TypeScript estricto, Tailwind v4, zod, Vitest, ESLint, Prettier. Base de datos: Supabase (Postgres) accedida con **Prisma ORM 7** (la aplicación no contiene SQL; las reglas de integridad viven en las migraciones).
 - **Despliegue:** servidor propio con Docker (sin Node instalado en el host); el frontend corre en el puerto **9028**. `next build` usa salida `standalone`.
-- **Carpetas:** `src/app` (páginas y API), `src/components`, `src/lib` (dominio puro con tests), `src/server` (repositorio, límite de intentos, utilidades HTTP), `db/migrations` (SQL), `docs`, `prompts`.
+- **Carpetas:** `src/app` (páginas y API), `src/components`, `src/lib` (dominio puro con tests), `src/server` (repositorio, límite de intentos, utilidades HTTP), `prisma` (esquema y migraciones), `src/generated` (cliente, se genera), `docs`, `prompts`.
 
 **Endpoints (API):**
 
@@ -192,7 +192,7 @@ Entregables útiles: sistema de componentes responsive (móvil, tablet, escritor
 
 **Trazabilidad:** cada cambio deja un evento con hora: `creado`, `compartido_whatsapp`, `link_copiado`, `abierto_por_pagador`, `aprobacion_iniciada`, `cobrado`, `vencido`. El esquema SQL propuesto hace la tabla de eventos de solo agregar (un trigger impide actualizar o borrar).
 
-**Esquema SQL (aprobado, aún no aplicado):** `db/migrations/0001_cobros.sql` con tablas `comercios`, `cobros` y `eventos`, restricciones de monto y estado, índice de código único mientras esté en uso, numeración atómica por comercio, seguridad por filas activa sin políticas (solo el servidor accede) y columnas listas para Open Payments (incoming payment, quote, outgoing payment).
+**Esquema (aprobado, aún no aplicado):** `prisma/schema.prisma` y la migración `prisma/migrations/20261016000000_init` con tablas `comercios`, `cobros` y `eventos`, restricciones de monto y estado, índice de código único mientras esté en uso, numeración atómica por comercio (contador incrementado dentro de la transacción), seguridad por filas activa sin políticas (solo el servidor accede) y columnas listas para Open Payments (incoming payment, quote, outgoing payment).
 
 **Seguridad aplicada:** validación con zod en cada entrada; el pagador solo ve comercio, monto, concepto, estado y vencimiento; límite de intentos para frenar la adivinanza de códigos; la llave privada de Open Payments solo vivirá en el servidor y está fuera de git; `.env` ignorado por git.
 
@@ -204,7 +204,7 @@ Entregables útiles: sistema de componentes responsive (móvil, tablet, escritor
 
 **Simulado:** confirmación del pago, factura electrónica, puntaje y crédito, tasa de cambio (usa una tasa de ejemplo), datos semilla del talonario (tres cobros de ejemplo).
 
-**Listo para activar:** el repositorio de Postgres (SQL directo con `pg`, transacciones, bloqueo de fila al aprobar, vencimiento y confirmación de demo calculados al leer, sin temporizadores) está escrito y comparte el mismo contrato que la versión en memoria. Se elige con `COBROS_STORE` (`memoria` por defecto, `postgres` para Supabase). **Todavía no se ha ejecutado contra una base real**: sus 8 pruebas de integración se omiten hasta tener una base local desechable. El equipo debe pegar `db/migrations/0001_cobros.sql` en el SQL Editor de Supabase y luego poner `COBROS_STORE=postgres`.
+**Listo para activar:** el repositorio de Postgres usa **Prisma ORM** (sin SQL en la aplicación): el número consecutivo sale de un contador incrementado en la transacción, cada cambio de estado es una comparación y asignación atómica (`updateMany` con el estado esperado, sin bloqueos manuales), y el vencimiento y la confirmación de demo se calculan al leer, sin temporizadores. Comparte contrato con la versión en memoria y se elige con `COBROS_STORE` (`memoria` por defecto, `postgres` para Supabase). **Todavía no se ha ejecutado contra una base real**: sus 8 pruebas de integración corren en el CI con un Postgres desechable. Para activarlo: `npm run db:migrate` con el `DATABASE_URL` directo de Supabase y luego `COBROS_STORE=postgres`.
 
 **Pendiente, en orden:**
 

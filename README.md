@@ -15,15 +15,33 @@ cp .env.example .env.local
 npm run dev -- -p 9028
 ```
 
-Open http://localhost:9028. By default data lives in memory (`COBROS_STORE=memoria`). To use Postgres, apply `db/migrations/0001_cobros.sql` and set `COBROS_STORE=postgres` with `DATABASE_URL`.
+Open http://localhost:9028. By default data lives in memory (`COBROS_STORE=memoria`). To use Postgres, set `DATABASE_URL`, run `npm run db:migrate` and set `COBROS_STORE=postgres`. With Docker Desktop, see the commands below.
+
+## Docker Desktop
+
+```bash
+docker compose up -d db               # Postgres 16 on localhost:5432
+docker compose run --rm migrate       # apply Prisma migrations
+docker compose up --build app         # http://localhost:9028
+docker compose logs -f app            # follow logs
+docker compose down                   # stop (add -v to wipe the database)
+```
+
+Run the published image instead of building it:
+
+```bash
+docker run --rm -p 9028:9028 ghcr.io/juanma1015/trivo:latest
+```
 
 ## Scripts
 
-| Command         | What it does                                    |
-| --------------- | ----------------------------------------------- |
-| `npm run check` | Lint, types, format and unit tests (same as CI) |
-| `npm test`      | Vitest. Postgres tests need `TEST_DATABASE_URL` |
-| `npm run build` | Production build (standalone output)            |
+| Command              | What it does                                    |
+| -------------------- | ----------------------------------------------- |
+| `npm run check`      | Lint, types, format and unit tests (same as CI) |
+| `npm test`           | Vitest. Postgres tests need `TEST_DATABASE_URL` |
+| `npm run build`      | Production build (standalone output)            |
+| `npm run db:migrate` | Apply Prisma migrations to `DATABASE_URL`       |
+| `npm run db:studio`  | Browse the database with Prisma Studio          |
 
 ## CI/CD
 
