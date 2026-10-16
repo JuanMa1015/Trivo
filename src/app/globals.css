@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #007ea7;
+  --color-secondary: #1f1f1f;
+  --color-tertiary: #80ced7;
+  --color-neutral: #f0f0f0;
+  /* Semantic states, darkened to keep AA contrast on white. */
+  --color-atencion: #b45309;
+  --color-critico: #b42318;
+  --font-sans: Helvetica, Arial, sans-serif;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+  background: var(--color-neutral);
+  color: var(--color-secondary);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--color-tertiary);
+  color: var(--color-secondary);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Recibo: papel blanco con perforación punteada y muescas hacia el talón. */
+.recibo {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgb(31 31 31 / 0.06),
+    0 12px 28px -14px rgb(31 31 31 / 0.22);
+}
+
+.perforacion {
+  position: relative;
+  height: 0;
+  margin: 0 14px;
+  border-top: 2px dashed rgb(31 31 31 / 0.2);
+}
+
+.perforacion::before,
+.perforacion::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-neutral);
+}
+
+.perforacion::before {
+  left: -26px;
+}
+
+.perforacion::after {
+  right: -26px;
+}
+
+/* Talonario: hojas apiladas bajo el recibo en edición. */
+.pila {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.pila-hoja {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(31 31 31 / 0.1);
+}
+
+.pila-hoja:nth-child(1) {
+  transform: translateY(14px) scale(0.94);
+  opacity: 0.75;
+}
+
+.pila-hoja:nth-child(2) {
+  transform: translateY(7px) scale(0.97);
+}
+
+/* Talones del historial: perforación con muescas entre recibos. */
+.talon {
+  position: relative;
+}
+
+.talon + .talon {
+  border-top: 2px dashed rgb(31 31 31 / 0.2);
+}
+
+.talon + .talon::before,
+.talon + .talon::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-neutral);
+}
+
+.talon + .talon::before {
+  left: -12px;
+}
+
+.talon + .talon::after {
+  right: -12px;
+}
+
+@keyframes rasgar {
+  from {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(-10px);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes sellar {
+  from {
+    opacity: 0;
+    transform: rotate(-7deg) scale(1.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-7deg) scale(1);
+  }
+}
+
+@keyframes latido {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.anim-rasgar {
+  animation: rasgar 0.55s var(--ease-out-expo) both;
+}
+
+.anim-sellar {
+  animation: sellar 0.4s var(--ease-out-expo) both;
+}
+
+.anim-latido {
+  animation: latido 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rasgar,
+  .anim-sellar,
+  .anim-latido {
+    animation: none;
+  }
+}
+
+@keyframes progreso {
+  from {
+    width: 4%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.anim-progreso {
+  width: 4%;
+  animation: progreso 5s linear forwards;
+}

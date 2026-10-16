@@ -1,0 +1,25 @@
+.git
+.github
+.next
+node_modules
+npm-debug.log*
+
+# Secrets and local config never enter the image
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.crt
+private.key
+
+# Not needed at runtime
+docs
+prompts
+db
+scripts
+.impeccable
+AGENTS.md
+Dockerfile
+.dockerignore
+coverage
