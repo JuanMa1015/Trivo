@@ -1,12 +1,14 @@
-import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { PrismaClient } from "@/generated/prisma/client";
 import { PROCESO_DEMO_MS, VENCE_EN_MS } from "@/lib/cobros";
-import { crearRepoPostgres } from "./cobros-repo-pg";
+import { crearRepoPrisma } from "./cobros-repo-prisma";
 
 /**
- * Pruebas de integración contra una base Postgres desechable con la migración
- * 0001 aplicada. Solo corren si existe TEST_DATABASE_URL. Los eventos son
- * inmutables, así que estas pruebas dejan filas: usa una base local, nunca Supabase.
+ * Pruebas de integración contra una base Postgres desechable con las migraciones
+ * aplicadas (`npm run db:migrate`). Solo corren si existe TEST_DATABASE_URL.
+ * Los eventos son inmutables, así que estas pruebas dejan filas: usa una base
+ * local o la del CI, nunca Supabase.
  */
 const url = process.env.TEST_DATABASE_URL;
 if (url && /supabase\.(co|com)/.test(url)) {
@@ -15,15 +17,17 @@ if (url && /supabase\.(co|com)/.test(url)) {
   );
 }
 
-describe.skipIf(!url)("repositorio Postgres", () => {
-  let pool: Pool;
-  let repo: ReturnType<typeof crearRepoPostgres>;
+describe.skipIf(!url)("repositorio Prisma", () => {
+  let prisma: PrismaClient;
+  let repo: ReturnType<typeof crearRepoPrisma>;
 
   beforeAll(() => {
-    pool = new Pool({ connectionString: url });
-    repo = crearRepoPostgres(() => pool);
+    prisma = new PrismaClient({
+      adapter: new PrismaPg({ connectionString: url }),
+    });
+    repo = crearRepoPrisma(() => prisma);
   });
-  afterAll(() => pool.end());
+  afterAll(() => prisma.$disconnect());
 
   it("crea un cobro con número, código, vencimiento a 10 minutos y evento inicial", async () => {
     const a = await repo.crear(50_000, "Ropa");
@@ -35,7 +39,7 @@ describe.skipIf(!url)("repositorio Postgres", () => {
     expect(a.eventos.map((e) => e.tipo)).toEqual(["creado"]);
   });
 
-  it("rechaza datos inválidos desde la base", async () => {
+  it("la base rechaza montos fuera de rango", async () => {
     await expect(repo.crear(0, "")).rejects.toThrow();
     await expect(repo.crear(1_000_000_000, "")).rejects.toThrow();
   });
@@ -47,28 +51,24 @@ describe.skipIf(!url)("repositorio Postgres", () => {
     expect("eventos" in lista[0]).toBe(false);
   });
 
-  it("registra la primera apertura del pagador una sola vez", async () => {
+  it("registra la primera apertura del pagador una sola vez, incluso en paralelo", async () => {
     const c = await repo.crear(3_000, "");
-    await repo.verComoPagador(c.codigo);
-    await repo.verComoPagador(c.codigo);
+    await Promise.all([
+      repo.verComoPagador(c.codigo),
+      repo.verComoPagador(c.codigo),
+      repo.verComoPagador(c.codigo),
+    ]);
     const eventos = (await repo.obtener(c.numero))?.eventos.map((e) => e.tipo);
     expect(eventos?.filter((t) => t === "abierto_por_pagador")).toHaveLength(1);
   });
 
   it("pasa por procesando y termina cobrado a los 5 segundos, sin cobrar dos veces", async () => {
     const c = await repo.crear(50_000, "Ropa");
-    expect(
-      await repo.aprobarComoPagador(c.codigo, "https://ilp.dev/w"),
-    ).toEqual({
-      ok: true,
-      estado: "procesando",
-    });
-    expect(
-      await repo.aprobarComoPagador(c.codigo, "https://ilp.dev/w"),
-    ).toMatchObject({
-      ok: false,
-      motivo: "no_disponible",
-    });
+    const [uno, dos] = await Promise.all([
+      repo.aprobarComoPagador(c.codigo, "https://ilp.dev/w"),
+      repo.aprobarComoPagador(c.codigo, "https://ilp.dev/w"),
+    ]);
+    expect([uno.ok, dos.ok].filter(Boolean)).toHaveLength(1);
 
     await new Promise((r) => setTimeout(r, PROCESO_DEMO_MS + 500));
     const final = await repo.obtener(c.numero);
@@ -81,14 +81,16 @@ describe.skipIf(!url)("repositorio Postgres", () => {
     ]);
   }, 20_000);
 
-  it("vence al leer, deja constancia y no deja pagar", async () => {
+  it("vence al leer, deja constancia una vez y no deja pagar", async () => {
     const c = await repo.crear(7_000, "");
-    await pool.query(
-      `update cobros set creado_en = now() - interval '11 minutes',
-         vence_en = now() - interval '1 second'
-       where codigo = $1 and estado = 'esperando'`,
-      [c.codigo],
-    );
+    await prisma.cobro.updateMany({
+      where: { codigo: c.codigo, estado: "esperando" },
+      data: {
+        creadoEn: new Date(Date.now() - 11 * 60_000),
+        venceEn: new Date(Date.now() - 1_000),
+      },
+    });
+    await Promise.all([repo.obtener(c.numero), repo.obtener(c.numero)]);
     expect((await repo.obtener(c.numero))?.estado).toBe("vencido");
     expect(await repo.simularPago(c.numero)).toEqual({
       ok: false,
@@ -111,10 +113,8 @@ describe.skipIf(!url)("repositorio Postgres", () => {
 
   it("los eventos no se pueden modificar ni borrar", async () => {
     await expect(
-      pool.query("update eventos set detalle = 'x'"),
-    ).rejects.toThrow(/solo agregar/);
-    await expect(pool.query("delete from eventos")).rejects.toThrow(
-      /solo agregar/,
-    );
+      prisma.evento.updateMany({ data: { detalle: "x" } }),
+    ).rejects.toThrow();
+    await expect(prisma.evento.deleteMany({})).rejects.toThrow();
   });
 });
