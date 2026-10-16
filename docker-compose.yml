@@ -1,0 +1,49 @@
+# Local development with Docker Desktop. Not used in production.
+#
+#   docker compose up -d db                # Postgres
+#   docker compose run --rm migrate        # apply Prisma migrations
+#   docker compose up --build app          # app on http://localhost:9028
+#
+# The credentials below are for this local container only.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trivo
+      POSTGRES_PASSWORD: trivo
+      POSTGRES_DB: trivo
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trivo -d trivo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: postgresql://trivo:trivo@db:5432/trivo
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["tools"]
+
+  app:
+    build: .
+    ports:
+      - "9028:9028"
+    environment:
+      COBROS_STORE: postgres
+      DATABASE_URL: postgresql://trivo:trivo@db:5432/trivo
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
