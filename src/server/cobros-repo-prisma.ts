@@ -7,25 +7,24 @@ import {
   type Evento,
 } from "@/lib/cobros";
 import { COMERCIO_EJEMPLO } from "@/lib/talonario";
-import type { RepoCobros, ResultadoPago } from "./tipos";
+import { nuevoCodigo, nuevoToken } from "./confirmacion";
+import type { OpcionesRepo, RepoCobros, ResultadoPago } from "./tipos";
 
 type FilaCobro = Prisma.CobroGetPayload<{ include: { comercio: true } }>;
 
 const INTENTOS_CODIGO = 5;
 const PORDEN_EVENTOS = [{ creadoEn: "asc" }, { id: "asc" }] as const;
 
-const esViolacionUnica = (error: unknown) =>
+export const esViolacionUnica = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError &&
   error.code === "P2002";
 
-function codigoAleatorio(): string {
-  return String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
-}
-
 function resumen(f: FilaCobro): CobroResumen {
   return {
+    id: f.id,
     numero: f.numero,
     codigo: f.codigo,
+    token: f.token,
     comercio: f.comercio.nombre,
     monto: f.monto,
     concepto: f.concepto,
@@ -33,6 +32,12 @@ function resumen(f: FilaCobro): CobroResumen {
     creadoEn: f.creadoEn.toISOString(),
     venceEn: f.venceEn.toISOString(),
     ...(f.pagadoEn ? { pagadoEn: f.pagadoEn.toISOString() } : {}),
+    ...(f.incomingPaymentUrl
+      ? { incomingPaymentUrl: f.incomingPaymentUrl }
+      : {}),
+    ...(f.outgoingPaymentUrl
+      ? { outgoingPaymentUrl: f.outgoingPaymentUrl }
+      : {}),
   };
 }
 
@@ -42,7 +47,11 @@ function resumen(f: FilaCobro): CobroResumen {
  * estado esperado): si dos lecturas coinciden, solo una lo aplica y deja el evento.
  * Sin temporizadores en el proceso: sobrevive a reinicios.
  */
-async function aplicarTiempo(prisma: PrismaClient, ahora: Date): Promise<void> {
+async function aplicarTiempo(
+  prisma: PrismaClient,
+  ahora: Date,
+  completarDemo: boolean,
+): Promise<void> {
   const porVencer = await prisma.cobro.findMany({
     where: { estado: "esperando", venceEn: { lte: ahora } },
     select: { id: true, venceEn: true },
@@ -61,7 +70,9 @@ async function aplicarTiempo(prisma: PrismaClient, ahora: Date): Promise<void> {
     });
   }
 
-  // ponytail: confirmación simulada a los 5 s; la real vendrá de Open Payments.
+  if (!completarDemo) return;
+
+  // ponytail: confirmación simulada a los 5 s; con Open Payments real la confirma el riel.
   const procesando = await prisma.cobro.findMany({
     where: { estado: "procesando" },
     select: {
@@ -101,6 +112,7 @@ async function aplicarTiempo(prisma: PrismaClient, ahora: Date): Promise<void> {
 export function crearRepoPrisma(
   obtenerPrisma: () => PrismaClient,
   ahora: () => Date = () => new Date(),
+  opciones: OpcionesRepo = { completarDemo: true, semilla: false },
 ): RepoCobros {
   let comercioId: string | undefined;
 
@@ -121,6 +133,9 @@ export function crearRepoPrisma(
     return (comercioId = nuevo.id);
   }
 
+  const refrescar = (prisma: PrismaClient) =>
+    aplicarTiempo(prisma, ahora(), opciones.completarDemo);
+
   async function porNumero(prisma: PrismaClient, numero: number) {
     return prisma.cobro.findUnique({
       where: { comercioId_numero: { comercioId: await comercio(), numero } },
@@ -134,6 +149,9 @@ export function crearRepoPrisma(
       orderBy: { creadoEn: "desc" },
       include: { comercio: true },
     });
+
+  const porToken = (prisma: PrismaClient, token: string) =>
+    prisma.cobro.findUnique({ where: { token }, include: { comercio: true } });
 
   async function conEventos(
     prisma: PrismaClient,
@@ -151,43 +169,40 @@ export function crearRepoPrisma(
     return { ...resumen(fila), eventos };
   }
 
-  async function iniciarPago(
-    buscar: (prisma: PrismaClient) => Promise<FilaCobro | null>,
-    detalle: string,
-  ): Promise<ResultadoPago> {
+  /**
+   * Cambio de estado atómico: solo se aplica si el cobro está en uno de los
+   * estados de origen, y deja su evento en la misma transacción.
+   */
+  async function transicion(
+    numero: number,
+    desde: Cobro["estado"][],
+    datos: Prisma.CobroUpdateManyMutationInput,
+    evento: { tipo: Evento["tipo"]; detalle?: string },
+  ): Promise<boolean> {
     const prisma = obtenerPrisma();
-    await aplicarTiempo(prisma, ahora());
-    const fila = await buscar(prisma);
-    if (!fila) return { ok: false, motivo: "no_encontrado" };
-
-    // Comparación y asignación atómica: dos aprobaciones a la vez no pueden pasar las dos.
-    const aprobado = await prisma.$transaction(async (tx) => {
+    await refrescar(prisma);
+    const fila = await porNumero(prisma, numero);
+    if (!fila) return false;
+    return prisma.$transaction(async (tx) => {
       const { count } = await tx.cobro.updateMany({
-        where: { id: fila.id, estado: "esperando" },
-        data: { estado: "procesando" },
+        where: { id: fila.id, estado: { in: desde } },
+        data: datos,
       });
       if (count !== 1) return false;
       await tx.evento.create({
         data: {
           cobroId: fila.id,
-          tipo: "aprobacion_iniciada",
-          detalle,
+          tipo: evento.tipo,
+          detalle: evento.detalle,
           creadoEn: ahora(),
         },
       });
       return true;
     });
-    if (aprobado) return { ok: true, estado: "procesando" };
-
-    const actual = await prisma.cobro.findUniqueOrThrow({
-      where: { id: fila.id },
-      select: { estado: true },
-    });
-    return { ok: false, motivo: "no_disponible", estado: actual.estado };
   }
 
   return {
-    async crear(monto, concepto) {
+    async crear(monto, concepto, extra) {
       const prisma = obtenerPrisma();
       const idComercio = await comercio();
 
@@ -206,11 +221,13 @@ export function crearRepoPrisma(
               data: {
                 comercioId: idComercio,
                 numero: ultimoNumero,
-                codigo: codigoAleatorio(),
+                codigo: nuevoCodigo(),
+                token: nuevoToken(),
                 monto,
                 concepto,
                 creadoEn: creado,
                 venceEn: new Date(creado.getTime() + VENCE_EN_MS),
+                incomingPaymentUrl: extra?.incomingPaymentUrl,
                 eventos: { create: { tipo: "creado", creadoEn: creado } },
               },
               include: { comercio: true },
@@ -226,7 +243,7 @@ export function crearRepoPrisma(
 
     async listar() {
       const prisma = obtenerPrisma();
-      await aplicarTiempo(prisma, ahora());
+      await refrescar(prisma);
       const filas = await prisma.cobro.findMany({
         where: { comercioId: await comercio() },
         orderBy: { numero: "desc" },
@@ -238,56 +255,111 @@ export function crearRepoPrisma(
 
     async obtener(numero) {
       const prisma = obtenerPrisma();
-      await aplicarTiempo(prisma, ahora());
+      await refrescar(prisma);
       const fila = await porNumero(prisma, numero);
       return fila ? conEventos(prisma, fila) : undefined;
     },
 
-    async registrarDelCliente(numero, tipo) {
+    async obtenerPorCodigo(codigo) {
+      const prisma = obtenerPrisma();
+      await refrescar(prisma);
+      const fila = await porCodigo(prisma, codigo);
+      return fila ? conEventos(prisma, fila) : undefined;
+    },
+
+    async obtenerPorToken(token) {
+      const prisma = obtenerPrisma();
+      await refrescar(prisma);
+      const fila = await porToken(prisma, token);
+      return fila ? conEventos(prisma, fila) : undefined;
+    },
+
+    async obtenerPorId(id) {
+      const prisma = obtenerPrisma();
+      await refrescar(prisma);
+      const fila = await prisma.cobro.findUnique({
+        where: { id },
+        include: { comercio: true },
+      });
+      return fila ? conEventos(prisma, fila) : undefined;
+    },
+
+    async registrar(numero, tipo, detalle) {
       const prisma = obtenerPrisma();
       const fila = await porNumero(prisma, numero);
       if (!fila) return false;
       await prisma.evento.create({
-        data: { cobroId: fila.id, tipo, creadoEn: ahora() },
+        data: { cobroId: fila.id, tipo, detalle, creadoEn: ahora() },
       });
       return true;
     },
 
-    async verComoPagador(codigo) {
+    async registrarApertura(token) {
       const prisma = obtenerPrisma();
-      await aplicarTiempo(prisma, ahora());
-      const fila = await porCodigo(prisma, codigo);
-      if (!fila) return undefined;
-      if (fila.estado === "esperando") {
-        try {
-          await prisma.evento.create({
-            data: {
-              cobroId: fila.id,
-              tipo: "abierto_por_pagador",
-              creadoEn: ahora(),
-            },
-          });
-        } catch (error) {
-          // El índice único ya tiene la primera apertura: es lo esperado, no un fallo.
-          if (!esViolacionUnica(error)) throw error;
-        }
+      await refrescar(prisma);
+      const fila = await porToken(prisma, token);
+      if (!fila || fila.estado !== "esperando") return;
+      try {
+        await prisma.evento.create({
+          data: {
+            cobroId: fila.id,
+            tipo: "abierto_por_pagador",
+            creadoEn: ahora(),
+          },
+        });
+      } catch (error) {
+        // El índice único ya tiene la primera apertura: es lo esperado, no un fallo.
+        if (!esViolacionUnica(error)) throw error;
       }
-      return {
-        comercio: fila.comercio.nombre,
-        monto: fila.monto,
-        concepto: fila.concepto,
-        estado: fila.estado,
-        venceEn: fila.venceEn.toISOString(),
-      };
     },
 
-    aprobarComoPagador: (codigo, wallet) =>
-      iniciarPago((prisma) => porCodigo(prisma, codigo), wallet),
+    async iniciarPagoDemo(numero, detalle): Promise<ResultadoPago> {
+      const prisma = obtenerPrisma();
+      const aprobado = await transicion(
+        numero,
+        ["esperando"],
+        { estado: "procesando" },
+        { tipo: "aprobacion_iniciada", detalle },
+      );
+      if (aprobado) return { ok: true, estado: "procesando" };
 
-    simularPago: (numero) =>
-      iniciarPago(
-        (prisma) => porNumero(prisma, numero),
-        "simulado por el vendedor (demo)",
+      const fila = await porNumero(prisma, numero);
+      if (!fila) return { ok: false, motivo: "no_encontrado" };
+      return { ok: false, motivo: "no_disponible", estado: fila.estado };
+    },
+
+    marcarProcesando: (numero, outgoingPaymentUrl) =>
+      transicion(
+        numero,
+        ["esperando"],
+        { estado: "procesando", outgoingPaymentUrl },
+        { tipo: "pago_enviado" },
       ),
+
+    marcarCobrado: (numero, detalle) =>
+      transicion(
+        numero,
+        ["esperando", "procesando"],
+        { estado: "cobrado", pagadoEn: ahora() },
+        { tipo: "cobrado", detalle },
+      ),
+
+    marcarFallido: (numero, detalle) =>
+      transicion(
+        numero,
+        ["procesando"],
+        { estado: "vencido" },
+        { tipo: "pago_fallido", detalle },
+      ),
+
+    async listarProcesando() {
+      const prisma = obtenerPrisma();
+      await refrescar(prisma);
+      const filas = await prisma.cobro.findMany({
+        where: { estado: "procesando" },
+        include: { comercio: true },
+      });
+      return Promise.all(filas.map((f) => conEventos(prisma, f)));
+    },
   };
 }

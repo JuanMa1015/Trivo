@@ -16,6 +16,11 @@ export const TIPOS_EVENTO = [
   "aprobacion_iniciada",
   "cobrado",
   "vencido",
+  // Open Payments real:
+  "cotizado",
+  "consentimiento_iniciado",
+  "pago_enviado",
+  "pago_fallido",
 ] as const;
 export type TipoEvento = (typeof TIPOS_EVENTO)[number];
 
@@ -27,13 +32,22 @@ export const ETIQUETA_EVENTO: Record<TipoEvento, string> = {
   aprobacion_iniciada: "El pagador aprobó en su wallet",
   cobrado: "Pago confirmado",
   vencido: "Venció sin pagarse",
+  cotizado: "El pagador vio el precio",
+  consentimiento_iniciado: "El pagador pasó a su wallet para aprobar",
+  pago_enviado: "El pagador aprobó y el pago salió de su wallet",
+  pago_fallido: "El pago no se completó",
 };
 
 export type Evento = { tipo: TipoEvento; en: string; detalle?: string };
 
 export type Cobro = {
+  /** Identificador interno; no se muestra al pagador. */
+  id: string;
   numero: number;
+  /** 6 dígitos para decirlos en voz alta. Solo sirve para encontrar el token; no para pagar. */
   codigo: string;
+  /** Secreto único del cobro (128 bits) que viaja en el link y el QR. */
+  token: string;
   comercio: string;
   monto: number;
   concepto: string;
@@ -41,20 +55,61 @@ export type Cobro = {
   creadoEn: string;
   venceEn: string;
   pagadoEn?: string;
+  /** Solo existe cuando el dinero ya llegó; el servidor lo firma con un secreto. */
+  confirmacion?: string;
+  /** Objetos de Open Payments (URLs públicas); vacíos en el modo demo. */
+  incomingPaymentUrl?: string;
+  outgoingPaymentUrl?: string;
   eventos: Evento[];
 };
 
 /** El talonario no necesita la trazabilidad de cada cobro. */
 export type CobroResumen = Omit<Cobro, "eventos">;
 
+/** Importe en unidades menores, como lo entrega Open Payments (valor entero en texto). */
+export type Monto = { valor: string; codigo: string; escala: number };
+
+export const montoANumero = (m: Monto): number =>
+  Number(m.valor) / 10 ** m.escala;
+
+/**
+ * Cuánto recibe el vendedor por cada unidad que paga el pagador (por ejemplo
+ * COP por USD). Nulo si ambos importes están en la misma moneda.
+ */
+export function tasaImplicita(debito: Monto, recibe: Monto): number | null {
+  if (debito.codigo === recibe.codigo) return null;
+  const pagado = montoANumero(debito);
+  return pagado > 0 ? montoANumero(recibe) / pagado : null;
+}
+
 /** Lo único que ve quien paga: nada de eventos ni de numeración interna. */
 export type PagoPublico = Pick<
   Cobro,
   "comercio" | "monto" | "concepto" | "estado" | "venceEn"
->;
+> & {
+  /** Nombre que la wallet receptora declara públicamente: confirma que se paga a la persona correcta. */
+  receptor: string;
+  /** Dirección pública de esa wallet, para compararla si hay dudas. */
+  receptorWallet: string;
+  pagadoEn?: string;
+  /** Mismo código que verá el vendedor en su pantalla cuando el dinero llegó. */
+  confirmacion?: string;
+};
+
+/** Precio exacto que verá el pagador antes de aprobar. */
+export type CotizacionPublica = {
+  intentoId: string;
+  receptor: string;
+  pagador: string | null;
+  debito: Monto;
+  recibe: Monto;
+  venceEn: string;
+};
 
 export const VENCE_EN_MS = 10 * 60 * 1000;
 export const PROCESO_DEMO_MS = 5_000;
+/** Un pago enviado que no llega en este tiempo se da por fallido. */
+export const PAGO_SIN_CONFIRMAR_MS = 3 * 60 * 1000;
 export const MAX_MONTO = 999_999_999;
 
 export const crearCobroSchema = z.object({
@@ -66,13 +121,21 @@ export const eventoClienteSchema = z.object({
   tipo: z.enum(["compartido_whatsapp", "link_copiado"]),
 });
 
-export const aprobarSchema = z.object({
-  wallet: z
-    .string()
-    .trim()
-    .regex(/^https:\/\/[^\s/]+\.[^\s/]+(\/\S*)?$/, "https:// wallet address")
-    .max(200),
-});
+export const walletUrlSchema = z
+  .string()
+  .trim()
+  .regex(/^https:\/\/[^\s/]+\.[^\s/]+(\/\S*)?$/, "https:// wallet address")
+  .max(200);
+
+/** Token del link y el QR: 16 bytes aleatorios en base64url (22 caracteres). */
+export const TOKEN_BYTES = 16;
+export const TOKEN_RE = /^[A-Za-z0-9_-]{22}$/;
+
+export const resolverSchema = z.object({ codigo: z.string().regex(/^\d{6}$/) });
+
+export const cotizarSchema = z.object({ wallet: walletUrlSchema });
+
+export const aprobarSchema = z.object({ intentoId: z.uuid() });
 
 export function estaVencido(
   cobro: Pick<Cobro, "estado" | "venceEn">,

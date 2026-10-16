@@ -29,6 +29,10 @@ enum TipoEvento {
   aprobacion_iniciada
   cobrado
   vencido
+  cotizado
+  consentimiento_iniciado
+  pago_enviado
+  pago_fallido
 
   @@map("tipo_evento")
 }
@@ -48,6 +52,8 @@ model Cobro {
   comercioId String      @map("comercio_id") @db.Uuid
   numero     Int
   codigo     String      @db.Char(6)
+  // Secreto del link y el QR (128 bits). El código de 6 dígitos solo ayuda a encontrarlo.
+  token      String      @unique
   monto      Int
   concepto   String      @default("")
   estado     EstadoCobro @default(esperando)
@@ -60,8 +66,9 @@ model Cobro {
   quoteUrl           String? @map("quote_url")
   outgoingPaymentUrl String? @map("outgoing_payment_url")
 
-  comercio Comercio @relation(fields: [comercioId], references: [id])
+  comercio Comercio      @relation(fields: [comercioId], references: [id])
   eventos  Evento[]
+  intentos IntentoPago[]
 
   @@unique([comercioId, numero])
   @@index([comercioId, creadoEn(sort: Desc)])
@@ -80,4 +87,32 @@ model Evento {
 
   @@index([cobroId, creadoEn])
   @@map("eventos")
+}
+
+// Un intento por cada vez que el pagador pone su wallet y ve el precio. Guarda lo
+// necesario para seguir el consentimiento cuando el navegador regresa de su wallet.
+// Contiene el token de continuación del grant: solo el servidor accede a esta tabla.
+model IntentoPago {
+  id            String   @id @default(uuid()) @db.Uuid
+  cobroId       String   @map("cobro_id") @db.Uuid
+  walletPagador String   @map("wallet_pagador")
+  nombrePagador String?  @map("nombre_pagador")
+  quoteUrl      String   @map("quote_url")
+  debitoValor   String   @map("debito_valor")
+  debitoCodigo  String   @map("debito_codigo")
+  debitoEscala  Int      @map("debito_escala")
+  recibeValor   String   @map("recibe_valor")
+  recibeCodigo  String   @map("recibe_codigo")
+  recibeEscala  Int      @map("recibe_escala")
+  continueUri   String?  @map("continue_uri")
+  continueToken String?  @map("continue_token")
+  nonceCliente  String?  @map("nonce_cliente")
+  nonceAs       String?  @map("nonce_as")
+  creadoEn      DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  venceEn       DateTime @map("vence_en") @db.Timestamptz(3)
+
+  cobro Cobro @relation(fields: [cobroId], references: [id])
+
+  @@index([cobroId])
+  @@map("intentos_pago")
 }
