@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { EstadoChip } from "@/components/estado-chip";
 import {
   IconArrowLeft,
@@ -9,25 +10,60 @@ import {
   IconCopy,
   IconSend,
 } from "@/components/icons";
+import { Qr } from "@/components/qr";
 import { Sello } from "@/components/sello";
+import { Trazabilidad } from "@/components/trazabilidad";
+import {
+  PROCESO_DEMO_MS,
+  formatearCuentaRegresiva,
+  segundosRestantes,
+  type Cobro,
+} from "@/lib/cobros";
 import { formatearPesos } from "@/lib/format";
-import { COMERCIO_EJEMPLO, codigoAgrupado } from "@/lib/talonario";
-import { useTalonario } from "@/lib/talonario-store";
+import { codigoAgrupado, horaDe } from "@/lib/talonario";
+import { useAhora, usePolling } from "@/lib/use-polling";
+
+function registrarEvento(
+  numero: number,
+  tipo: "compartido_whatsapp" | "link_copiado",
+) {
+  void fetch(`/api/cobros/${numero}/eventos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tipo }),
+  });
+}
 
 export function CobroScreen({ numero }: { numero: number }) {
-  const { recibos, guardar, listo } = useTalonario();
+  const router = useRouter();
+  const { data, estado } = usePolling<{ cobro: Cobro }>(
+    `/api/cobros/${numero}`,
+    2000,
+  );
+  const ahora = useAhora();
   const [copiado, setCopiado] = useState(false);
-  const recibo = recibos.find((r) => r.numero === numero);
+  const [inicioSimulacion, setInicioSimulacion] = useState<number | null>(null);
+  const cobro = data?.cobro;
 
-  if (!listo) return <main className="flex-1" />;
+  // Tras simular el pago: cargar ~5 s y volver al talonario cuando el cobro quede cobrado.
+  const cobrado = cobro?.estado === "cobrado";
+  useEffect(() => {
+    if (inicioSimulacion === null || !cobrado) return;
+    const falta = Math.max(
+      0,
+      PROCESO_DEMO_MS - (Date.now() - inicioSimulacion),
+    );
+    const id = setTimeout(() => router.push("/"), falta);
+    return () => clearTimeout(id);
+  }, [inicioSimulacion, cobrado, router]);
 
-  if (!recibo) {
+  if (estado === "no_encontrado") {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-start gap-4 px-4 py-8">
         <h1 className="text-2xl font-bold">No encontramos este recibo</h1>
         <p className="text-secondary/70">
-          Puede que se haya abierto en otra pestaña. Vuelve al talonario para
-          ver tus cobros.
+          Puede que el servidor se haya reiniciado. Vuelve al talonario para ver
+          tus cobros.
         </p>
         <Link
           href="/"
@@ -39,23 +75,29 @@ export function CobroScreen({ numero }: { numero: number }) {
     );
   }
 
-  const origen = typeof window === "undefined" ? "" : window.location.origin;
-  const enlace = `${origen}/p/${recibo.codigo}?m=${recibo.monto}&c=${encodeURIComponent(recibo.concepto)}`;
-  const mensaje = `${COMERCIO_EJEMPLO} te cobra ${formatearPesos(recibo.monto)}. Entra a ${origen}/pagar y escribe el código ${codigoAgrupado(recibo.codigo)}.`;
-  const cobrado = recibo.estado === "cobrado";
+  if (!cobro) return <main className="flex-1" />;
 
-  function marcarCobrado() {
-    guardar(
-      recibos.map((r) =>
-        r.numero === numero ? { ...r, estado: "cobrado" } : r,
-      ),
-    );
+  const origen = window.location.origin;
+  const enlace = `${origen}/p/${cobro.codigo}`;
+  const mensaje = `${cobro.comercio} te cobra ${formatearPesos(cobro.monto)}. Entra a ${origen}/pagar y escribe el código ${codigoAgrupado(cobro.codigo)}, o abre ${enlace}`;
+  const procesando = cobro.estado === "procesando";
+  const esperando = cobro.estado === "esperando";
+  const vencido = cobro.estado === "vencido";
+  const restante = segundosRestantes(cobro.venceEn, ahora);
+
+  async function simular() {
+    setInicioSimulacion(Date.now());
+    const r = await fetch(`/api/cobros/${numero}/simular-pago`, {
+      method: "POST",
+    });
+    if (!r.ok) setInicioSimulacion(null);
   }
 
   async function copiar() {
     try {
       await navigator.clipboard.writeText(enlace);
       setCopiado(true);
+      registrarEvento(numero, "link_copiado");
       setTimeout(() => setCopiado(false), 2000);
     } catch {
       // Clipboard blocked: the code stays visible to read aloud.
@@ -75,58 +117,90 @@ export function CobroScreen({ numero }: { numero: number }) {
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">
             <p className="text-5xl font-bold leading-none tracking-tight">
-              {formatearPesos(recibo.monto)}
+              {formatearPesos(cobro.monto)}
             </p>
             <span className="shrink-0 pt-1 text-sm font-bold text-secondary/70">
-              N.º {String(recibo.numero).padStart(4, "0")}
+              N.º {String(cobro.numero).padStart(4, "0")}
             </span>
           </div>
           <p className="mt-2 text-secondary/70">
-            {recibo.concepto || "Sin concepto"} · {recibo.hora}
+            {cobro.concepto || "Sin concepto"} · {horaDe(cobro.creadoEn)}
           </p>
         </div>
 
         <div className="perforacion" />
 
         <div className="anim-rasgar p-5">
-          <p className="text-sm font-bold text-secondary/70">
-            Dile este código a quien te paga
-          </p>
-          <p className="mt-1 text-6xl font-bold tracking-[0.06em] text-primary">
-            {codigoAgrupado(recibo.codigo)}
-          </p>
+          {esperando ? (
+            <>
+              <p className="text-sm font-bold text-secondary/70">
+                Dile este código a quien te paga
+              </p>
+              <p className="mt-1 text-6xl font-bold tracking-[0.06em] text-primary">
+                {codigoAgrupado(cobro.codigo)}
+              </p>
+              <div className="mt-4 flex items-center gap-4">
+                <Qr
+                  texto={enlace}
+                  etiqueta={`QR para pagar ${formatearPesos(cobro.monto)}`}
+                />
+                <p className="text-sm text-secondary/70">
+                  O que escanee este QR con la cámara.
+                </p>
+              </div>
+            </>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <EstadoChip estado={cobro.estado} />
+            {esperando ? (
+              <span className="text-sm text-secondary/70">
+                Vence en{" "}
+                <strong className="text-secondary">
+                  {formatearCuentaRegresiva(restante)}
+                </strong>
+              </span>
+            ) : null}
+            {procesando ? (
+              <span className="anim-latido text-sm text-secondary/70">
+                Confirmando el pago…
+              </span>
+            ) : null}
+            {vencido ? (
+              <span className="text-sm text-secondary/70">
+                Venció a las {horaDe(cobro.venceEn)}. Crea uno nuevo.
+              </span>
+            ) : null}
+          </div>
+
+          {procesando ? (
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-neutral"
+              role="progressbar"
+              aria-label="Confirmando el pago"
+            >
+              <div className="anim-progreso h-full rounded-full bg-primary" />
+            </div>
+          ) : null}
 
           {cobrado ? (
-            <div className="mt-5 flex items-center gap-4">
+            <div className="mt-2 flex items-center gap-4">
               <Sello texto="Cobrado" />
               <p className="text-sm text-secondary/70">
                 Se sumó a tu historial. Factura generada (demo).
               </p>
             </div>
-          ) : (
-            <div className="mt-4 flex items-center gap-3">
-              <EstadoChip estado={recibo.estado} />
-              <span className="anim-latido text-sm text-secondary/70">
-                Esperando que pague…
-              </span>
-            </div>
-          )}
+          ) : null}
         </div>
       </article>
 
-      {cobrado ? (
-        <Link
-          href="/"
-          className="flex h-16 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
-        >
-          Nuevo cobro
-        </Link>
-      ) : (
+      {esperando ? (
         <div className="flex flex-col gap-3">
           <a
             href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => registrarEvento(numero, "compartido_whatsapp")}
             className="flex h-16 items-center justify-center gap-3 rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
           >
             <IconSend width={24} height={24} /> Enviar por WhatsApp
@@ -145,13 +219,24 @@ export function CobroScreen({ numero }: { numero: number }) {
           </button>
           <button
             type="button"
-            onClick={marcarCobrado}
+            onClick={simular}
             className="h-12 rounded-2xl border border-secondary/25 text-sm font-bold text-secondary/80"
           >
             Simular que ya pagó (demo)
           </button>
         </div>
-      )}
+      ) : null}
+
+      {cobrado || vencido ? (
+        <Link
+          href="/"
+          className="flex h-16 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
+        >
+          Nuevo cobro
+        </Link>
+      ) : null}
+
+      <Trazabilidad eventos={cobro.eventos} />
     </main>
   );
 }

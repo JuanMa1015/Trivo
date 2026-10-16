@@ -168,3 +168,17 @@ body {
     animation: none;
   }
 }
+
+@keyframes progreso {
+  from {
+    width: 4%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.anim-progreso {
+  width: 4%;
+  animation: progreso 5s linear forwards;
+}

@@ -1,8 +1,12 @@
-import type { Estado } from "@/lib/talonario";
+import type { Estado } from "@/lib/cobros";
 
 const ESTILO: Record<Estado, { clase: string; texto: string }> = {
   cobrado: { clase: "bg-primary text-white", texto: "Cobrado" },
   esperando: { clase: "bg-tertiary text-secondary", texto: "Esperando" },
+  procesando: {
+    clase: "bg-tertiary text-secondary anim-latido",
+    texto: "Procesando",
+  },
   vencido: {
     clase: "border border-secondary/30 text-secondary/70",
     texto: "Vencido",

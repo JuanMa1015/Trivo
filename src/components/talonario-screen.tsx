@@ -5,42 +5,54 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EstadoChip } from "@/components/estado-chip";
 import { Keypad } from "@/components/keypad";
+import type { Cobro, CobroResumen } from "@/lib/cobros";
 import { formatearPesos } from "@/lib/format";
 import {
   COMERCIO_EJEMPLO,
   CONCEPTOS,
   aplicarTecla,
-  generarCodigo,
-  horaActual,
-  siguienteNumero,
+  horaDe,
   totalCobrado,
 } from "@/lib/talonario";
-import { useTalonario } from "@/lib/talonario-store";
+import { usePolling } from "@/lib/use-polling";
 
 export function TalonarioScreen() {
   const router = useRouter();
-  const { recibos, guardar, listo } = useTalonario();
+  const { data, estado } = usePolling<{ cobros: CobroResumen[] }>(
+    "/api/cobros",
+    3000,
+  );
   const [digitos, setDigitos] = useState("");
   const [concepto, setConcepto] = useState("");
+  const [creando, setCreando] = useState(false);
+  const [error, setError] = useState(false);
 
-  const visibles = listo ? recibos : [];
+  const cobros = data?.cobros ?? [];
+  const listo = data !== null;
   const monto = Number(digitos);
-  const numero = siguienteNumero(recibos);
+  const proximo = cobros.reduce((max, c) => Math.max(max, c.numero), 0) + 1;
 
-  function cobrar() {
-    if (monto <= 0) return;
-    guardar([
-      {
-        numero,
-        monto,
-        concepto,
-        codigo: generarCodigo(),
-        estado: "esperando",
-        hora: horaActual(),
-      },
-      ...recibos,
-    ]);
-    router.push(`/cobro/${numero}`);
+  async function cobrar() {
+    if (monto <= 0 || creando) return;
+    setCreando(true);
+    setError(false);
+    try {
+      const r = await fetch("/api/cobros", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monto, concepto }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      const { cobro } = (await r.json()) as { cobro: Cobro };
+      // La pantalla se conserva en caché al navegar: déjala lista para el próximo cobro.
+      setDigitos("");
+      setConcepto("");
+      setCreando(false);
+      router.push(`/cobro/${cobro.numero}`);
+    } catch {
+      setError(true);
+      setCreando(false);
+    }
   }
 
   return (
@@ -73,7 +85,7 @@ export function TalonarioScreen() {
             <div className="flex items-center justify-between gap-3 text-sm font-bold text-secondary/70">
               <span>Concepto (opcional)</span>
               <span>
-                {listo ? `N.º ${String(numero).padStart(4, "0")}` : null}
+                {listo ? `N.º ${String(proximo).padStart(4, "0")}` : null}
               </span>
             </div>
             <div
@@ -106,11 +118,16 @@ export function TalonarioScreen() {
       <button
         type="button"
         onClick={cobrar}
-        disabled={monto <= 0}
+        disabled={monto <= 0 || creando}
         className="h-16 w-full rounded-2xl bg-primary text-xl font-bold text-white shadow-sm transition-[transform,opacity] duration-100 active:scale-[0.98] disabled:opacity-40"
       >
-        Cobrar
+        {creando ? "Creando cobro…" : "Cobrar"}
       </button>
+      {error ? (
+        <p role="alert" className="-mt-2 font-bold text-critico">
+          No pudimos crear el cobro. Revisa tu conexión e intenta de nuevo.
+        </p>
+      ) : null}
 
       <section aria-labelledby="talonario-titulo" className="mt-3">
         <div className="flex items-baseline justify-between">
@@ -120,41 +137,44 @@ export function TalonarioScreen() {
           <p className="text-sm text-secondary/70">
             Cobrado:{" "}
             <strong className="text-secondary">
-              {formatearPesos(totalCobrado(visibles))}
+              {formatearPesos(totalCobrado(cobros))}
             </strong>
           </p>
         </div>
 
-        {listo && visibles.length === 0 ? (
+        {estado === "error" && !listo ? (
+          <p className="recibo mt-3 p-5 font-bold text-critico">
+            No pudimos cargar tu talonario. Reintentando…
+          </p>
+        ) : listo && cobros.length === 0 ? (
           <p className="recibo mt-3 p-5 text-secondary/70">
             Tu primer recibo aparece aquí cuando cobres.
           </p>
         ) : (
           <ul className="recibo mt-3 overflow-hidden">
-            {visibles.map((r) => (
-              <li key={r.numero} className="talon">
+            {cobros.map((c) => (
+              <li key={c.numero} className="talon">
                 <Link
-                  href={`/cobro/${r.numero}`}
+                  href={`/cobro/${c.numero}`}
                   className="flex min-h-16 items-center gap-3 px-4 py-3"
                 >
                   <span className="w-12 shrink-0 border-r-2 border-dashed border-secondary/20 pr-3 text-sm font-bold text-secondary/70">
-                    {String(r.numero).padStart(4, "0")}
+                    {String(c.numero).padStart(4, "0")}
                   </span>
                   <span className="flex-1">
                     <span className="block font-bold">
-                      {formatearPesos(r.monto)}
+                      {formatearPesos(c.monto)}
                     </span>
                     <span className="block text-sm text-secondary/70">
-                      {r.concepto || "Sin concepto"} · {r.hora}
+                      {c.concepto || "Sin concepto"} · {horaDe(c.creadoEn)}
                     </span>
                   </span>
-                  <EstadoChip estado={r.estado} />
+                  <EstadoChip estado={c.estado} />
                 </Link>
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-2 text-xs text-secondary/70">Datos de ejemplo</p>
       </section>
     </main>
   );

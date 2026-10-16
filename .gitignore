@@ -50,3 +50,4 @@ private.key
 .impeccable/hook.cache.json
 .impeccable/review/
 .impeccable/build/
+supabase-ca.crt

@@ -1,25 +1,16 @@
 import { describe, expect, it } from "vitest";
-import {
-  RECIBOS_EJEMPLO,
-  aplicarTecla,
-  codigoAgrupado,
-  generarCodigo,
-  siguienteNumero,
-  totalCobrado,
-} from "./talonario";
+import { aplicarTecla, codigoAgrupado, totalCobrado } from "./talonario";
 
 describe("talonario", () => {
-  it("numera el siguiente recibo", () => {
-    expect(siguienteNumero([])).toBe(1);
-    expect(siguienteNumero(RECIBOS_EJEMPLO)).toBe(43);
-  });
-
   it("suma solo lo cobrado", () => {
-    expect(totalCobrado(RECIBOS_EJEMPLO)).toBe(155_000);
-  });
-
-  it("genera códigos de 6 dígitos", () => {
-    for (let i = 0; i < 50; i++) expect(generarCodigo()).toMatch(/^\d{6}$/);
+    expect(
+      totalCobrado([
+        { estado: "cobrado", monto: 35_000 },
+        { estado: "cobrado", monto: 120_000 },
+        { estado: "vencido", monto: 18_000 },
+        { estado: "procesando", monto: 9_000 },
+      ]),
+    ).toBe(155_000);
   });
 
   it("agrupa el código en dos bloques", () => {
