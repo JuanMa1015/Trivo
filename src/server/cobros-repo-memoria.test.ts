@@ -29,12 +29,30 @@ describe("cobros", () => {
     expect(b.codigo).not.toBe(a.codigo);
   });
 
+  it("guarda la URL del incoming payment cuando se la dan", async () => {
+    const repo = crearRepoMemoria();
+    const c = await repo.crear(1_000, "", {
+      incomingPaymentUrl: "https://op.dev/ip/1",
+    });
+    expect((await repo.obtener(c.numero))?.incomingPaymentUrl).toBe(
+      "https://op.dev/ip/1",
+    );
+  });
+
   it("el talonario no trae eventos y va del más nuevo al más viejo", async () => {
     const repo = crearRepoMemoria();
     const c = await repo.crear(1_000, "");
     const lista = await repo.listar();
     expect(lista[0].numero).toBe(c.numero);
     expect("eventos" in lista[0]).toBe(false);
+  });
+
+  it("sin semilla arranca vacío", async () => {
+    const repo = crearRepoMemoria(Date.now, {
+      completarDemo: false,
+      semilla: false,
+    });
+    expect(await repo.listar()).toEqual([]);
   });
 
   it("vence al leer y deja constancia con la hora de vencimiento", async () => {
@@ -53,7 +71,7 @@ describe("cobros", () => {
     const repo = crearRepoMemoria();
     const c = await repo.crear(50_000, "");
     vi.setSystemTime(T0 + VENCE_EN_MS + 1_000);
-    expect(await repo.simularPago(c.numero)).toEqual({
+    expect(await repo.iniciarPagoDemo(c.numero, "demo")).toEqual({
       ok: false,
       motivo: "no_disponible",
       estado: "vencido",
@@ -61,16 +79,14 @@ describe("cobros", () => {
   });
 });
 
-describe("pago", () => {
+describe("pago de demo", () => {
   it("pasa por procesando y termina cobrado a los 5 segundos, con trazabilidad", async () => {
     const repo = crearRepoMemoria();
     const c = await repo.crear(50_000, "Ropa");
-    await repo.verComoPagador(c.codigo);
-    await repo.verComoPagador(c.codigo);
+    await repo.registrarApertura(c.token);
+    await repo.registrarApertura(c.token);
 
-    expect(
-      await repo.aprobarComoPagador(c.codigo, "https://ilp.dev/w"),
-    ).toEqual({
+    expect(await repo.iniciarPagoDemo(c.numero, "https://ilp.dev/w")).toEqual({
       ok: true,
       estado: "procesando",
     });
@@ -88,27 +104,95 @@ describe("pago", () => {
     ]);
   });
 
+  it("con completarDemo apagado no se confirma solo", async () => {
+    const repo = crearRepoMemoria(Date.now, {
+      completarDemo: false,
+      semilla: false,
+    });
+    const c = await repo.crear(50_000, "");
+    await repo.iniciarPagoDemo(c.numero, "demo");
+    vi.setSystemTime(T0 + PROCESO_DEMO_MS * 10);
+    expect((await repo.obtener(c.numero))?.estado).toBe("procesando");
+  });
+
   it("no cobra dos veces", async () => {
     const repo = crearRepoMemoria();
     const c = await repo.crear(50_000, "");
-    expect((await repo.simularPago(c.numero)).ok).toBe(true);
-    expect(await repo.simularPago(c.numero)).toMatchObject({
+    expect((await repo.iniciarPagoDemo(c.numero, "demo")).ok).toBe(true);
+    expect(await repo.iniciarPagoDemo(c.numero, "demo")).toMatchObject({
       ok: false,
       motivo: "no_disponible",
     });
   });
+});
 
-  it("el pagador solo ve lo necesario y un código inexistente no existe", async () => {
-    const repo = crearRepoMemoria();
-    const c = await repo.crear(50_000, "Ropa");
-    expect(
-      Object.keys((await repo.verComoPagador(c.codigo)) ?? {}).sort(),
-    ).toEqual(["comercio", "concepto", "estado", "monto", "venceEn"]);
-    expect(await repo.verComoPagador("000000x")).toBeUndefined();
-    expect(await repo.aprobarComoPagador("nope", "https://ilp.dev/w")).toEqual({
-      ok: false,
-      motivo: "no_encontrado",
+describe("pago real: transiciones", () => {
+  it("esperando -> procesando -> cobrado, cada paso con su evento", async () => {
+    const repo = crearRepoMemoria(Date.now, {
+      completarDemo: false,
+      semilla: false,
     });
+    const c = await repo.crear(50_000, "");
+    expect(await repo.marcarProcesando(c.numero, "https://op.dev/out/1")).toBe(
+      true,
+    );
+    expect((await repo.listarProcesando()).map((x) => x.numero)).toEqual([
+      c.numero,
+    ]);
+    expect(await repo.marcarCobrado(c.numero, "confirmado")).toBe(true);
+
+    const final = await repo.obtener(c.numero);
+    expect(final?.estado).toBe("cobrado");
+    expect(final?.outgoingPaymentUrl).toBe("https://op.dev/out/1");
+    expect(final?.eventos.map((e) => e.tipo)).toEqual([
+      "creado",
+      "pago_enviado",
+      "cobrado",
+    ]);
+  });
+
+  it("no repite transiciones ni salta estados", async () => {
+    const repo = crearRepoMemoria(Date.now, {
+      completarDemo: false,
+      semilla: false,
+    });
+    const c = await repo.crear(50_000, "");
+    expect(await repo.marcarFallido(c.numero, "x")).toBe(false); // solo desde procesando
+    expect(await repo.marcarProcesando(c.numero, "https://op.dev/out/1")).toBe(
+      true,
+    );
+    expect(await repo.marcarProcesando(c.numero, "https://op.dev/out/2")).toBe(
+      false,
+    );
+    expect(await repo.marcarCobrado(c.numero, "ok")).toBe(true);
+    expect(await repo.marcarCobrado(c.numero, "otra vez")).toBe(false);
+  });
+
+  it("un pago que no llega queda fallido y deja constancia", async () => {
+    const repo = crearRepoMemoria(Date.now, {
+      completarDemo: false,
+      semilla: false,
+    });
+    const c = await repo.crear(50_000, "");
+    await repo.marcarProcesando(c.numero, "https://op.dev/out/1");
+    expect(await repo.marcarFallido(c.numero, "sin llegada")).toBe(true);
+    const final = await repo.obtener(c.numero);
+    expect(final?.estado).toBe("vencido");
+    expect(final?.eventos.at(-1)).toMatchObject({
+      tipo: "pago_fallido",
+      detalle: "sin llegada",
+    });
+  });
+
+  it("busca por id y por código", async () => {
+    const repo = crearRepoMemoria(Date.now, {
+      completarDemo: false,
+      semilla: false,
+    });
+    const c = await repo.crear(50_000, "");
+    expect((await repo.obtenerPorId(c.id))?.numero).toBe(c.numero);
+    expect((await repo.obtenerPorCodigo(c.codigo))?.numero).toBe(c.numero);
+    expect(await repo.obtenerPorCodigo("000000x")).toBeUndefined();
   });
 });
 

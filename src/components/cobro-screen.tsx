@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EstadoChip } from "@/components/estado-chip";
 import {
   IconArrowLeft,
@@ -34,12 +34,41 @@ function registrarEvento(
   });
 }
 
+/** Aviso inmediato cuando el dinero llega: vibración y un pitido corto. */
+function avisarCobro() {
+  try {
+    navigator.vibrate?.([200, 100, 200]);
+  } catch {
+    // Sin vibración en este dispositivo: el aviso visual basta.
+  }
+  try {
+    const AC =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const osc = ctx.createOscillator();
+    const volumen = ctx.createGain();
+    osc.frequency.value = 880;
+    volumen.gain.value = 0.15;
+    osc.connect(volumen);
+    volumen.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+    osc.onended = () => void ctx.close();
+  } catch {
+    // El navegador bloqueó el audio: queda el aviso visual.
+  }
+}
+
 export function CobroScreen({ numero }: { numero: number }) {
   const router = useRouter();
-  const { data, estado } = usePolling<{ cobro: Cobro }>(
-    `/api/cobros/${numero}`,
-    2000,
-  );
+  // Cada segundo: el vendedor debe ver el dinero llegar casi al instante.
+  const { data, estado } = usePolling<{
+    cobro: Cobro;
+    modo: "demo" | "open-payments";
+  }>(`/api/cobros/${numero}`, 1000);
   const ahora = useAhora();
   const [copiado, setCopiado] = useState(false);
   const [inicioSimulacion, setInicioSimulacion] = useState<number | null>(null);
@@ -56,6 +85,20 @@ export function CobroScreen({ numero }: { numero: number }) {
     const id = setTimeout(() => router.push("/"), falta);
     return () => clearTimeout(id);
   }, [inicioSimulacion, cobrado, router]);
+
+  // Avisa solo cuando el cobro pasa a cobrado mientras se mira, no al abrir uno ya cobrado.
+  const estadoPrevio = useRef<string | undefined>(undefined);
+  const estadoActual = cobro?.estado;
+  useEffect(() => {
+    if (
+      estadoActual === "cobrado" &&
+      estadoPrevio.current &&
+      estadoPrevio.current !== "cobrado"
+    ) {
+      avisarCobro();
+    }
+    estadoPrevio.current = estadoActual;
+  }, [estadoActual]);
 
   if (estado === "no_encontrado") {
     return (
@@ -78,7 +121,11 @@ export function CobroScreen({ numero }: { numero: number }) {
   if (!cobro) return <main className="flex-1" />;
 
   const origen = window.location.origin;
-  const enlace = `${origen}/p/${cobro.codigo}`;
+  // El link y el QR llevan el token (128 bits); el código de 6 dígitos solo se dice en voz alta.
+  const enlace = `${origen}/p/${cobro.token}`;
+  const pagador = cobro.eventos.findLast(
+    (e) => e.tipo === "cotizado" || e.tipo === "consentimiento_iniciado",
+  )?.detalle;
   const mensaje = `${cobro.comercio} te cobra ${formatearPesos(cobro.monto)}. Entra a ${origen}/pagar y escribe el código ${codigoAgrupado(cobro.codigo)}, o abre ${enlace}`;
   const procesando = cobro.estado === "procesando";
   const esperando = cobro.estado === "esperando";
@@ -173,6 +220,13 @@ export function CobroScreen({ numero }: { numero: number }) {
             ) : null}
           </div>
 
+          {pagador && !cobrado ? (
+            <p className="mt-3 text-sm text-secondary/70">
+              Quien paga:{" "}
+              <strong className="break-all text-secondary">{pagador}</strong>
+            </p>
+          ) : null}
+
           {procesando ? (
             <div
               className="mt-4 h-2 overflow-hidden rounded-full bg-neutral"
@@ -184,11 +238,27 @@ export function CobroScreen({ numero }: { numero: number }) {
           ) : null}
 
           {cobrado ? (
-            <div className="mt-2 flex items-center gap-4">
-              <Sello texto="Cobrado" />
-              <p className="text-sm text-secondary/70">
-                Se sumó a tu historial. Factura generada (demo).
-              </p>
+            <div className="mt-2 flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <Sello texto="Cobrado" />
+                <p className="text-sm text-secondary/70">
+                  Se sumó a tu historial. Factura generada (demo).
+                </p>
+              </div>
+              {cobro.confirmacion ? (
+                <div className="rounded-2xl bg-neutral p-4">
+                  <p className="text-sm font-bold text-secondary/70">
+                    Código de confirmación
+                  </p>
+                  <p className="mt-1 text-5xl font-bold tracking-[0.12em] text-primary">
+                    {cobro.confirmacion}
+                  </p>
+                  <p className="mt-2 text-sm text-secondary/80">
+                    El cliente debe ver el mismo código en su pantalla. Si es
+                    distinto, no entregues nada todavía.
+                  </p>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -217,13 +287,15 @@ export function CobroScreen({ numero }: { numero: number }) {
             )}
             {copiado ? "Link copiado" : "Copiar link de pago"}
           </button>
-          <button
-            type="button"
-            onClick={simular}
-            className="h-12 rounded-2xl border border-secondary/25 text-sm font-bold text-secondary/80"
-          >
-            Simular que ya pagó (demo)
-          </button>
+          {data?.modo === "demo" ? (
+            <button
+              type="button"
+              onClick={simular}
+              className="h-12 rounded-2xl border border-secondary/25 text-sm font-bold text-secondary/80"
+            >
+              Simular que ya pagó (demo)
+            </button>
+          ) : null}
         </div>
       ) : null}
 

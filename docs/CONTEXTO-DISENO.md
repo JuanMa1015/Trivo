@@ -194,7 +194,7 @@ Entregables útiles: sistema de componentes responsive (móvil, tablet, escritor
 
 **Esquema (aprobado, aún no aplicado):** `prisma/schema.prisma` y la migración `prisma/migrations/20261016000000_init` con tablas `comercios`, `cobros` y `eventos`, restricciones de monto y estado, índice de código único mientras esté en uso, numeración atómica por comercio (contador incrementado dentro de la transacción), seguridad por filas activa sin políticas (solo el servidor accede) y columnas listas para Open Payments (incoming payment, quote, outgoing payment).
 
-**Seguridad aplicada:** validación con zod en cada entrada; el pagador solo ve comercio, monto, concepto, estado y vencimiento; límite de intentos para frenar la adivinanza de códigos; la llave privada de Open Payments solo vivirá en el servidor y está fuera de git; `.env` ignorado por git.
+**Seguridad aplicada (ver `docs/OPEN-PAYMENTS.md`, "Amenazas y defensas"):** token de 128 bits en link y QR (el código de 6 dígitos solo lo encuentra), código de confirmación idéntico en vendedor y pagador, cabeceras de seguridad (CSP con `frame-ancestors none`), verificación del dominio de consentimiento; validación con zod en cada entrada; el pagador solo ve comercio, monto, concepto, estado y vencimiento; límite de intentos para frenar la adivinanza de códigos; la llave privada de Open Payments solo vivirá en el servidor y está fuera de git; `.env` ignorado por git.
 
 **Seguridad pendiente:** los endpoints del vendedor **no tienen autenticación** todavía (hay que agregarla antes de exponer el servidor); el límite de intentos es en memoria y por proceso; la conexión directa de Supabase puede requerir IPv6 (si el servidor no lo tiene, usar el pooler).
 
@@ -202,7 +202,9 @@ Entregables útiles: sistema de componentes responsive (móvil, tablet, escritor
 
 **Hecho y verificado (tests, lint, tipos, formato y build pasan):** flujo de pantallas del vendedor y del pagador, QR, vencimiento y estado en vivo, trazabilidad, API con repositorio en memoria, ES/EN en el pagador, topes tributarios (componente), `PRODUCT.md` y `DESIGN.md`, esquema SQL redactado.
 
-**Simulado:** confirmación del pago, factura electrónica, puntaje y crédito, tasa de cambio (usa una tasa de ejemplo), datos semilla del talonario (tres cobros de ejemplo).
+**Simulado (riel `demo`):** confirmación del pago, tasa de cambio (tasa de ejemplo) y datos semilla del talonario. **Siempre simulado:** factura electrónica, puntaje y crédito.
+
+**Open Payments real (riel `open-payments`, escrito y probado con un puerto falso; sin probar aún contra la testnet):** incoming payment en la wallet receptora, cotización real contra la wallet del pagador, consentimiento interactivo en su wallet con retorno verificado, y confirmación cuando llega el dinero. El pagador ve el nombre de la wallet receptora antes de aprobar. Guía y límites: `docs/OPEN-PAYMENTS.md`.
 
 **Listo para activar:** el repositorio de Postgres usa **Prisma ORM** (sin SQL en la aplicación): el número consecutivo sale de un contador incrementado en la transacción, cada cambio de estado es una comparación y asignación atómica (`updateMany` con el estado esperado, sin bloqueos manuales), y el vencimiento y la confirmación de demo se calculan al leer, sin temporizadores. Comparte contrato con la versión en memoria y se elige con `COBROS_STORE` (`memoria` por defecto, `postgres` para Supabase). **Todavía no se ha ejecutado contra una base real**: sus 8 pruebas de integración corren en el CI con un Postgres desechable. Para activarlo: `npm run db:migrate` con el `DATABASE_URL` directo de Supabase y luego `COBROS_STORE=postgres`.
 
@@ -210,7 +212,7 @@ Entregables útiles: sistema de componentes responsive (móvil, tablet, escritor
 
 1. Conectar Supabase y aplicar la migración.
 2. Autenticación del vendedor.
-3. Integrar Open Payments real: crear el incoming payment, la quote real, y el grant interactivo de outgoing payment con retorno al sitio; reemplazar el pago simulado.
+3. Probar Open Payments real en la testnet (la integración está escrita; falta correrla con la llave y ajustar lo que la wallet exija).
 4. Despliegue con Docker en el puerto 9028.
 5. Rediseño web y móvil (este documento).
 6. Cuenta abierta (fiado) con límites de grant, racha, resumen semanal.

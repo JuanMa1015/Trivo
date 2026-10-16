@@ -13,8 +13,11 @@ services:
       POSTGRES_USER: trivo
       POSTGRES_PASSWORD: trivo
       POSTGRES_DB: trivo
+    # Only needed to reach the database from your machine (Prisma Studio, psql, npm run dev).
+    # The app and the migrate service use the internal network (db:5432), not this port.
+    # Port busy or reserved on Windows? Change it: DB_PORT=5434 docker compose up -d db
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

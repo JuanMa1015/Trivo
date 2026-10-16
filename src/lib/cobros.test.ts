@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   aprobarSchema,
+  cotizarSchema,
   crearCobroSchema,
   estaVencido,
   eventoClienteSchema,
   formatearCuentaRegresiva,
+  montoANumero,
   segundosRestantes,
+  tasaImplicita,
 } from "./cobros";
 
 const venceEn = "2026-10-16T12:10:00.000Z";
@@ -55,14 +58,40 @@ describe("validación de entradas", () => {
     );
   });
 
-  it("exige una wallet https", () => {
+  it("exige una wallet https para cotizar", () => {
     const ok = "https://ilp.interledger-test.dev/mi-wallet";
-    expect(aprobarSchema.safeParse({ wallet: ok }).success).toBe(true);
+    expect(cotizarSchema.safeParse({ wallet: ok }).success).toBe(true);
     expect(
-      aprobarSchema.safeParse({ wallet: "$ilp.dev/mi-wallet" }).success,
+      cotizarSchema.safeParse({ wallet: "$ilp.dev/mi-wallet" }).success,
     ).toBe(false);
-    expect(aprobarSchema.safeParse({ wallet: "http://x.dev/a" }).success).toBe(
+    expect(cotizarSchema.safeParse({ wallet: "http://x.dev/a" }).success).toBe(
       false,
     );
+  });
+
+  it("aprobar exige el id del intento que se cotizó", () => {
+    const id = "6f1c2d3e-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
+    expect(aprobarSchema.safeParse({ intentoId: id }).success).toBe(true);
+    expect(aprobarSchema.safeParse({ intentoId: "no-es-uuid" }).success).toBe(
+      false,
+    );
+    expect(aprobarSchema.safeParse({ wallet: "https://x.dev/a" }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("importes de Open Payments", () => {
+  const cop = { valor: "5000000", codigo: "COP", escala: 2 };
+  const usd = { valor: "1574", codigo: "USD", escala: 2 };
+
+  it("convierte unidades menores a número", () => {
+    expect(montoANumero(cop)).toBe(50_000);
+    expect(montoANumero(usd)).toBe(15.74);
+  });
+
+  it("calcula la tasa solo si las monedas son distintas", () => {
+    expect(tasaImplicita(usd, cop)).toBeCloseTo(3176.62, 1);
+    expect(tasaImplicita(cop, cop)).toBeNull();
   });
 });
