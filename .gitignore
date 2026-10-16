@@ -45,3 +45,8 @@ next-env.d.ts
 *.key
 *.pem
 private.key
+
+# impeccable tool cache and review artifacts (briefs in .impeccable/surfaces stay tracked)
+.impeccable/hook.cache.json
+.impeccable/review/
+.impeccable/build/

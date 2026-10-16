@@ -1,0 +1,61 @@
+export type Lang = "es" | "en";
+
+export const textos = {
+  es: {
+    pagarTitulo: "Pagar con código",
+    pagarAyuda: "Escribe el código de 6 dígitos que te dio el vendedor.",
+    codigo: "Código",
+    continuar: "Continuar",
+    teCobra: "te cobra",
+    tuPagas: "Tú pagas",
+    tasa: "Tasa",
+    comision: "Comisión",
+    sinComision: "Sin comisión (demo)",
+    tuWallet: "Tu wallet address",
+    walletAyuda: "Empieza con https://",
+    walletError: "Escribe una dirección que empiece con https://",
+    aprobar: "Aprobar en mi wallet",
+    seguridad:
+      "El dinero solo se mueve cuando tú lo apruebas en tu wallet, no en esta página.",
+    yendo: "Te llevamos a tu wallet",
+    yendoAyuda: "Allí verás el monto exacto y podrás aprobar o cancelar.",
+    simularAprobar: "Simular aprobación (demo)",
+    exito: "Pago enviado",
+    exitoAyuda: "El vendedor ya recibió su recibo.",
+    nuevoPago: "Hacer otro pago",
+    demo: "Datos de ejemplo",
+    codigoNoEncontrado: "No encontramos ese código",
+    codigoNoEncontradoAyuda:
+      "Revisa los 6 dígitos o pídele al vendedor que te lo repita.",
+    otroCodigo: "Escribir otro código",
+  },
+  en: {
+    pagarTitulo: "Pay with a code",
+    pagarAyuda: "Enter the 6-digit code the seller gave you.",
+    codigo: "Code",
+    continuar: "Continue",
+    teCobra: "is charging you",
+    tuPagas: "You pay",
+    tasa: "Rate",
+    comision: "Fee",
+    sinComision: "No fee (demo)",
+    tuWallet: "Your wallet address",
+    walletAyuda: "Starts with https://",
+    walletError: "Enter an address that starts with https://",
+    aprobar: "Approve in my wallet",
+    seguridad:
+      "Money only moves when you approve it in your wallet, not on this page.",
+    yendo: "Taking you to your wallet",
+    yendoAyuda:
+      "There you will see the exact amount and can approve or cancel.",
+    simularAprobar: "Simulate approval (demo)",
+    exito: "Payment sent",
+    exitoAyuda: "The seller already got their receipt.",
+    nuevoPago: "Make another payment",
+    demo: "Sample data",
+    codigoNoEncontrado: "We couldn't find that code",
+    codigoNoEncontradoAyuda:
+      "Check the 6 digits or ask the seller to repeat it.",
+    otroCodigo: "Enter another code",
+  },
+} as const satisfies Record<Lang, Record<string, string>>;
