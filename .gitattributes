@@ -1,0 +1,2 @@
+# Normalize line endings: shell scripts, Dockerfile and workflows must be LF on Linux.
+* text=auto eol=lf
