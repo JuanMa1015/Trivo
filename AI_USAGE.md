@@ -18,7 +18,7 @@ Requisito del hackatón: herramientas usadas, para qué, en qué archivos y qué
 | `prompts/`, `AI_USAGE.md`                                                           | Plantillas de documentación                                                                 |              |
 | `src/components/*`, `src/app/*` (pantallas), `src/lib/talonario.ts`, `DESIGN.md`    | Diseño y construcción del flujo de cobro (talonario, cobro, pago) con la skill de diseño    |              |
 | `src/lib/cobros.ts`, `src/lib/topes.ts`, `src/lib/conversion.ts`                    | Dominio: estados, vencimiento, trazabilidad, topes tributarios, conversión de ejemplo       |              |
-| `src/server/*`, `src/app/api/*`, `db/migrations/0001_cobros.sql`                    | API, repositorio en memoria y Postgres, límite de intentos, migración SQL                   |              |
+| `src/server/*`, `src/app/api/*`, `prisma/*`, `src/generated` (generado)             | API, repositorio en memoria y Prisma, límite de intentos, esquema y migración               |              |
 | `Dockerfile`, `.github/*`, `scripts/deploy.sh`, `docs/*`, `README.md`               | Contenedor, CI/CD, despliegue con rollback, documentación                                   |              |
 
 ## Qué se escribió a mano

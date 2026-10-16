@@ -1,0 +1,83 @@
+// Fuente de verdad del modelo de datos. Los cambios se versionan con migraciones:
+//   npx prisma migrate dev --name <cambio>
+// Las reglas que Prisma no expresa (CHECK, índices parciales, trigger, RLS) viven en
+// el SQL de cada migración: son infraestructura de la base, no código de la app.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EstadoCobro {
+  esperando
+  procesando
+  cobrado
+  vencido
+
+  @@map("estado_cobro")
+}
+
+enum TipoEvento {
+  creado
+  compartido_whatsapp
+  link_copiado
+  abierto_por_pagador
+  aprobacion_iniciada
+  cobrado
+  vencido
+
+  @@map("tipo_evento")
+}
+
+model Comercio {
+  id           String   @id @default(uuid()) @db.Uuid
+  nombre       String
+  ultimoNumero Int      @default(0) @map("ultimo_numero")
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  cobros       Cobro[]
+
+  @@map("comercios")
+}
+
+model Cobro {
+  id         String      @id @default(uuid()) @db.Uuid
+  comercioId String      @map("comercio_id") @db.Uuid
+  numero     Int
+  codigo     String      @db.Char(6)
+  monto      Int
+  concepto   String      @default("")
+  estado     EstadoCobro @default(esperando)
+  creadoEn   DateTime    @default(now()) @map("creado_en") @db.Timestamptz(3)
+  venceEn    DateTime    @map("vence_en") @db.Timestamptz(3)
+  pagadoEn   DateTime?   @map("pagado_en") @db.Timestamptz(3)
+
+  // Open Payments: vacías hasta integrar el flujo real.
+  incomingPaymentUrl String? @map("incoming_payment_url")
+  quoteUrl           String? @map("quote_url")
+  outgoingPaymentUrl String? @map("outgoing_payment_url")
+
+  comercio Comercio @relation(fields: [comercioId], references: [id])
+  eventos  Evento[]
+
+  @@unique([comercioId, numero])
+  @@index([comercioId, creadoEn(sort: Desc)])
+  @@index([estado, venceEn])
+  @@map("cobros")
+}
+
+model Evento {
+  id       BigInt     @id @default(autoincrement())
+  cobroId  String     @map("cobro_id") @db.Uuid
+  tipo     TipoEvento
+  detalle  String?
+  creadoEn DateTime   @default(now()) @map("creado_en") @db.Timestamptz(3)
+
+  cobro Cobro @relation(fields: [cobroId], references: [id])
+
+  @@index([cobroId, creadoEn])
+  @@map("eventos")
+}
