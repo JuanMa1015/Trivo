@@ -27,7 +27,7 @@ export function LangToggle({
           className={`h-11 min-w-14 rounded-full px-3 text-sm font-bold uppercase lg:h-10 lg:min-w-16 lg:text-web-sm ${
             lang === l
               ? "bg-secondary text-white lg:bg-primary lg:text-white"
-              : "text-secondary/70 lg:text-ink/60"
+              : "text-secondary/70 lg:text-ink/70"
           }`}
         >
           {l}

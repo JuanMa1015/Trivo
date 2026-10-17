@@ -79,7 +79,7 @@ async function Resultado({ searchParams }: PageProps<"/verificar">) {
               />
               <Fila etiqueta="Emitido el" valor={mostrar.e} />
             </dl>
-            <p className="mt-5 text-web-xs text-ink/60">
+            <p className="mt-5 text-web-xs text-ink/70">
               Resume los cobros recibidos con Trivo según sus registros. No es
               un certificado contable ni sustituye declaraciones ante la DIAN.
             </p>
@@ -97,7 +97,7 @@ async function Resultado({ searchParams }: PageProps<"/verificar">) {
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div>
-      <dt className="text-web-xs text-ink/60">{etiqueta}</dt>
+      <dt className="text-web-xs text-ink/70">{etiqueta}</dt>
       <dd className="break-words text-cuerpo font-bold text-tinta">{valor}</dd>
     </div>
   );

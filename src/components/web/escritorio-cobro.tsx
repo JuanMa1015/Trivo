@@ -51,7 +51,7 @@ export function EscritorioCobro({
             <h2 className="text-medio font-bold text-tinta">
               No encontramos este comprobante
             </h2>
-            <p className="text-web-sm text-ink/60">
+            <p className="text-web-sm text-ink/70">
               Puede que el servidor se haya reiniciado. Vuelve al talonario para
               ver tus cobros.
             </p>

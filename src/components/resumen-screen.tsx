@@ -1,13 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import {
-  useEffect,
-  useState,
-  type ComponentType,
-  type ReactNode,
-  type SVGProps,
-} from "react";
-import {
+  IconDescargar,
   IconDocumento,
   IconGrafico,
   IconRayo,
@@ -29,7 +24,10 @@ import {
 } from "@/components/web/contenedor";
 import { pesosWeb } from "@/components/web/formato";
 import { HeroWeb } from "@/components/web/hero-web";
-import { Icono3D, type Tono3D } from "@/components/web/icono-3d";
+import { CarruselTips } from "@/components/web/carrusel-tips";
+import { Icono3D } from "@/components/web/icono-3d";
+import { Selector } from "@/components/web/selector";
+import { TarjetaDato } from "@/components/web/tarjeta-dato";
 import { NavComercio } from "@/components/web/nav-web";
 import type { CobroResumen } from "@/lib/cobros";
 import { hoyEnColombia, mesAnterior, nombreDelPeriodo } from "@/lib/impuestos";
@@ -37,9 +35,12 @@ import { usePerfil } from "@/lib/use-perfil";
 import { useAhora, usePolling } from "@/lib/use-polling";
 
 const TIPS = [
-  "Registra cada venta, aunque sea pequeña. Así descubres tu mejor día.",
-  "Si le cobras a un turista, él ve su moneda y tú recibes pesos.",
-  "Si un cobro vence, crea uno nuevo. No pierdes nada.",
+  {
+    texto:
+      "Registra cada venta, aunque sea pequeña. Así descubres tu mejor día.",
+  },
+  { texto: "Si le cobras a un turista, él ve su moneda y tú recibes pesos." },
+  { texto: "Si un cobro vence, crea uno nuevo. No pierdes nada." },
 ];
 
 /**
@@ -93,10 +94,12 @@ export function ResumenScreen() {
         <DosColumnasWeb>
           <div className="flex min-h-0 flex-col gap-(--separacion)">
             <Semana r={r} listo={listo} cifra={cifra} />
-            <Certificado ahora={ahora} />
-            <Tips />
+            <CarruselTips tips={TIPS} />
           </div>
-          <Datos r={r} cifra={cifra} />
+          <div className="flex min-h-0 flex-col gap-(--separacion)">
+            <Datos r={r} cifra={cifra} />
+            <Certificado ahora={ahora} />
+          </div>
         </DosColumnasWeb>
       </PantallaWeb>
     </>
@@ -150,7 +153,7 @@ function Semana({
             <span
               key={dia}
               className={
-                i === r.indiceHoy ? "font-bold text-primary" : "text-ink/60"
+                i === r.indiceHoy ? "font-bold text-primary" : "text-ink/70"
               }
             >
               {dia}
@@ -159,7 +162,7 @@ function Semana({
         </figcaption>
       </figure>
       {listo && r.semana.cobros === 0 ? (
-        <p className="text-web-sm text-ink/60">
+        <p className="text-web-sm text-ink/70">
           Aún no hay datos. Cobra tu primer comprobante.
         </p>
       ) : null}
@@ -176,146 +179,37 @@ function Datos({ r, cifra }: { r: Resumen; cifra: Cifra }) {
   );
 
   return (
-    <div className="web-escalonado grid grid-cols-2 grid-rows-2 gap-(--separacion)">
-      <Dato
+    <div className="web-escalonado grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-(--separacion)">
+      <TarjetaDato
         Icono={IconReloj}
         tono="primario"
         etiqueta="Hoy"
         valor={cifra(pesosWeb(r.hoy.total))}
-        grafico={<GraficoPuntos valores={totales} resaltado={r.indiceHoy} />}
+        esquina={<GraficoPuntos valores={totales} resaltado={r.indiceHoy} />}
       />
-      <Dato
+      <TarjetaDato
         Icono={IconRayo}
         tono="cielo"
         etiqueta="Mejor día"
         valor={cifra(r.mejorDia === null ? "—" : DIAS[r.mejorDia])}
-        grafico={<GraficoPuntos valores={totales} resaltado={r.mejorDia} />}
+        esquina={<GraficoPuntos valores={totales} resaltado={r.mejorDia} />}
         destacado
       />
-      <Dato
+      <TarjetaDato
         Icono={IconDocumento}
         tono="agua"
         etiqueta="Cobros"
         valor={cifra(String(r.semana.cobros))}
-        grafico={<GraficoPuntos valores={conteos} resaltado={r.indiceHoy} />}
+        esquina={<GraficoPuntos valores={conteos} resaltado={r.indiceHoy} />}
       />
-      <Dato
+      <TarjetaDato
         Icono={IconWallet}
         tono="tinta"
         etiqueta="Promedio por cobro"
         valor={cifra(pesosWeb(r.promedio))}
-        grafico={<GraficoPuntos valores={promedios} resaltado={r.indiceHoy} />}
+        esquina={<GraficoPuntos valores={promedios} resaltado={r.indiceHoy} />}
       />
     </div>
-  );
-}
-
-function Dato({
-  Icono,
-  tono,
-  etiqueta,
-  valor,
-  grafico,
-  destacado = false,
-}: {
-  Icono: ComponentType<SVGProps<SVGSVGElement>>;
-  tono: Tono3D;
-  etiqueta: string;
-  valor: string;
-  grafico: ReactNode;
-  /** El mejor día va sobre agua, como el hero. */
-  destacado?: boolean;
-}) {
-  return (
-    <section
-      className={`contenedor-cifra flex flex-col justify-between gap-3 rounded-web p-6 shadow-tarjeta ${
-        destacado ? "hero-mini" : "bg-papel"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <Icono3D Icono={Icono} tono={tono} tamano={52} />
-        {grafico}
-      </div>
-      <div>
-        <h2 className="text-web-sm text-ink/60">{etiqueta}</h2>
-        <p className="cifra-web text-tinta">{valor}</p>
-      </div>
-    </section>
-  );
-}
-
-/** Cada tip se queda este tiempo antes de pasar al siguiente. */
-const TIP_MS = 6000;
-
-/**
- * Consejos para el vendedor, uno a la vez. Pasan solos; se pausan mientras el
- * mouse o el foco están encima, y los puntos permiten elegir uno.
- */
-function Tips() {
-  const [actual, setActual] = useState(0);
-  const [pausado, setPausado] = useState(false);
-
-  useEffect(() => {
-    if (pausado) return;
-    const id = setTimeout(
-      () => setActual((a) => (a + 1) % TIPS.length),
-      TIP_MS,
-    );
-    return () => clearTimeout(id);
-  }, [actual, pausado]);
-
-  return (
-    <section
-      className="web-subir flex items-center gap-6 rounded-web bg-tinta px-6 py-5 text-white shadow-tarjeta"
-      aria-labelledby="tip-titulo"
-      onMouseEnter={() => setPausado(true)}
-      onMouseLeave={() => setPausado(false)}
-      onFocus={() => setPausado(true)}
-      onBlur={() => setPausado(false)}
-    >
-      <Icono3D Icono={IconRayo} tono="agua" tamano={52} />
-      <div className="min-w-0 flex-1">
-        <h2 id="tip-titulo" className="text-web-sm font-bold text-aqua">
-          Tip
-        </h2>
-        {/* Solo se anuncia cuando la persona elige un tip, no en cada cambio automático. */}
-        <p
-          key={actual}
-          className="web-aparecer text-web-sm"
-          aria-live={pausado ? "polite" : "off"}
-        >
-          {TIPS[actual]}
-        </p>
-      </div>
-      <div className="flex">
-        {TIPS.map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setActual(i)}
-            aria-label={`Tip ${i + 1} de ${TIPS.length}`}
-            aria-current={i === actual ? "true" : undefined}
-            className="grid size-9 place-items-center rounded-full transition-colors duration-200 hover:bg-white/10"
-          >
-            {i === actual ? (
-              // El tip actual se muestra como una barra que se llena hasta el siguiente.
-              <span className="h-2.5 w-6 overflow-hidden rounded-full bg-white/25">
-                <span
-                  key={actual}
-                  className="tip-progreso block h-full rounded-full bg-aqua"
-                  style={{
-                    animationDuration: `${TIP_MS}ms`,
-                    animationPlayState: pausado ? "paused" : "running",
-                  }}
-                />
-              </span>
-            ) : (
-              <span className="size-2.5 rounded-full bg-white/30" />
-            )}
-          </button>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -326,34 +220,35 @@ function Certificado({ ahora }: { ahora: number }) {
   const [mes, setMes] = useState(actual);
 
   return (
-    <section className="tarjeta-web web-escalonado flex flex-col gap-4 p-6">
-      <EncabezadoTarjeta
-        icono={<IconDocumento width={24} height={24} />}
-        titulo="Certificado de ventas"
-        subtitulo="Una prueba de tus ingresos que cualquiera puede verificar"
+    <section className="tarjeta-web web-escalonado flex flex-col gap-4 p-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center 2xl:p-6">
+      <div className="flex min-w-0 items-center gap-4">
+        <Icono3D Icono={IconDocumento} tono="primario" tamano={48} />
+        <div className="min-w-0">
+          <h2 className="font-bold text-tinta lg:text-cuerpo">
+            Certificado de ventas
+          </h2>
+          <p className="truncate text-web-xs text-ink/70">
+            Verificable con código y QR.
+          </p>
+        </div>
+      </div>
+      <Selector
+        etiqueta="Mes del certificado"
+        valor={mes}
+        onCambio={setMes}
+        opciones={meses.map((m) => ({
+          valor: m,
+          texto: nombreDelPeriodo(m),
+        }))}
       />
-      <label className="flex flex-col gap-2 text-web-sm">
-        <span className="font-bold">Mes</span>
-        <select
-          value={mes}
-          onChange={(e) => setMes(e.target.value)}
-          className="campo-web"
-        >
-          {meses.map((m) => (
-            <option key={m} value={m}>
-              {nombreDelPeriodo(m)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <a href={`/api/certificado?mes=${mes}`} download className="boton-web">
-        Descargar certificado (PDF)
+      <a
+        href={`/api/certificado?mes=${mes}`}
+        download
+        className="boton-web whitespace-nowrap lg:w-auto lg:px-6"
+      >
+        <IconDescargar width={20} height={20} />
+        Descargar PDF
       </a>
-      <p className="text-web-xs text-ink/60">
-        Resume lo cobrado con Trivo ese mes y lleva un código y un QR: quien lo
-        reciba comprueba en línea que nadie cambió las cifras. No es un
-        certificado contable.
-      </p>
     </section>
   );
 }

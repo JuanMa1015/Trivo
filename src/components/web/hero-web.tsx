@@ -49,7 +49,7 @@ export function HeroWeb({
       </div>
 
       {comercio ? (
-        <p className="relative hidden items-center gap-2 self-end pb-8 text-web-sm font-semibold text-tinta lg:flex">
+        <p className="relative flex items-center gap-2 text-web-xs font-semibold text-tinta lg:self-end lg:pb-8 lg:text-web-sm">
           <Icono3D Icono={IconUbicacion} tono="cielo" tamano={32} />
           {comercio}
         </p>

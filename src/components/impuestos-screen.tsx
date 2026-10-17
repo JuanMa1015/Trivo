@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useSyncExternalStore, type ReactNode } from "react";
-import { IconDocumento, IconEscudo, IconReloj } from "@/components/icons";
+import { useState, useSyncExternalStore } from "react";
 import {
-  AvisoWeb,
-  DosColumnasWeb,
-  EncabezadoTarjeta,
-  PantallaWeb,
-} from "@/components/web/contenedor";
+  IconDocumento,
+  IconEscudo,
+  IconGrafico,
+  IconReloj,
+} from "@/components/icons";
+import { CarruselTips } from "@/components/web/carrusel-tips";
+import { AvisoWeb, PantallaWeb } from "@/components/web/contenedor";
 import { pesosWeb } from "@/components/web/formato";
 import { HeroWeb } from "@/components/web/hero-web";
+import type { Tono3D } from "@/components/web/icono-3d";
 import { NavComercio } from "@/components/web/nav-web";
+import { Selector } from "@/components/web/selector";
+import { TarjetaDato } from "@/components/web/tarjeta-dato";
 import {
   ANIO_GRAVABLE_A_DECLARAR,
   ANIO_GRAVABLE_EN_CURSO,
@@ -23,7 +27,6 @@ import {
   multaExtemporanea,
   multaPorNoDeclarar,
   plazoRenta,
-  sancionMinima,
   type AvanceTope,
 } from "@/lib/impuestos";
 import { AVISO_TRIBUTARIO, type Nivel } from "@/lib/topes";
@@ -52,11 +55,46 @@ const NIVEL: Record<Nivel, { barra: string; texto: string; etiqueta: string }> =
     },
   };
 
+/** Lo que pasa al acercarse o pasar cada tope, en una línea. */
 const SI_SUPERAS: Record<string, string> = {
-  "renta-ingresos": `Si cierras ${ANIO_GRAVABLE_EN_CURSO} por encima de este tope, tendrás que declarar renta del año ${ANIO_GRAVABLE_EN_CURSO}, aunque no debas pagar impuesto.`,
-  facturacion:
-    "Si lo superas, debes inscribirte como responsable de IVA y facturar electrónicamente cada venta.",
+  "renta-ingresos": `Tendrás que declarar renta de ${ANIO_GRAVABLE_EN_CURSO}.`,
+  facturacion: "Tendrás que facturar electrónicamente.",
 };
+
+/** Ícono, tono y nombre corto de cada tope. */
+const TOPE: Record<
+  string,
+  { Icono: typeof IconDocumento; tono: Tono3D; nombre: string }
+> = {
+  facturacion: {
+    Icono: IconDocumento,
+    tono: "primario",
+    nombre: "Tope para facturar",
+  },
+  "renta-ingresos": {
+    Icono: IconGrafico,
+    tono: "cielo",
+    nombre: "Tope para declarar renta",
+  },
+};
+
+const TRAZO: Record<Nivel, string> = {
+  ok: "stroke-primary",
+  atencion: "stroke-atencion",
+  critico: "stroke-critico",
+  superado: "stroke-critico",
+};
+
+const MESES = Array.from({ length: 12 }, (_, i) => {
+  const n = i + 1;
+  return {
+    valor: String(n),
+    texto: `${n} ${n === 1 ? "mes" : "meses"}${n === 12 ? " o más" : ""}`,
+  };
+});
+
+/** Lo que debes saber, uno a la vez. */
+const TIPS = [{ titulo: "Ojo", texto: NO_EXIME }, ...CONSEJOS];
 
 const soloDigitos = (texto: string, largo: number) =>
   texto.replace(/\D/g, "").slice(0, largo);
@@ -107,8 +145,9 @@ function useDocumento(): [string, (v: string) => void] {
 }
 
 /**
- * Impuestos (/impuestos): cuánto va del año frente a los topes de la DIAN, el plazo de
- * la declaración, cuánto puede costar no cumplir y consejos. Informativo, no asesoría.
+ * Impuestos (/impuestos): cuánto va del año frente a los topes de la DIAN, la fecha para
+ * declarar y cuánto cuesta hacerlo tarde. Una tarjeta por dato, con lo justo; el resto
+ * pasa en los consejos. Informativo, no asesoría.
  */
 export function ImpuestosScreen() {
   const { data, estado } = usePolling<{ anio: number; ingresos: number }>(
@@ -132,11 +171,12 @@ export function ImpuestosScreen() {
       )
     ) : null;
 
-  const avance = <Avance avances={avances} ingresos={ingresos} listo={listo} />;
-  const plazo = <Plazo ahora={ahora} />;
-  const multa = <Multa ahora={ahora} />;
-  const consejos = <Consejos />;
-  const pie = <p className="text-web-xs text-ink/60">{AVISO_TRIBUTARIO}</p>;
+  const topes = avances.map((a) => (
+    <TarjetaTope key={a.id} a={a} listo={listo} />
+  ));
+  const fecha = <FechaLimite ahora={ahora} />;
+  const multa = <Multa ahora={ahora} ingresos={ingresos} />;
+  const pie = <p className="text-web-xs text-ink/70">{AVISO_TRIBUTARIO}</p>;
 
   return (
     <>
@@ -157,362 +197,184 @@ export function ImpuestosScreen() {
         }
       >
         {aviso}
-        <NoEximeBanner />
-        <DosColumnasWeb>
-          <div className="flex min-h-0 flex-col gap-(--separacion)">
-            {avance}
-            {plazo}
-          </div>
-          <div className="flex min-h-0 flex-col gap-(--separacion)">
-            {multa}
-            {consejos}
-          </div>
-        </DosColumnasWeb>
+        <div className="web-escalonado grid min-h-0 flex-1 grid-cols-1 gap-(--separacion) sm:grid-cols-2 lg:grid-cols-4">
+          {topes}
+          {fecha}
+          {multa}
+        </div>
+        <CarruselTips titulo="Lo que debes saber" tips={TIPS} />
         {pie}
       </PantallaWeb>
     </>
   );
 }
 
-function NoEximeBanner() {
+/** Anillo con el porcentaje del tope. */
+function Anillo({ porcentaje, trazo }: { porcentaje: number; trazo: string }) {
+  const r = 22;
+  const vuelta = 2 * Math.PI * r;
+  const lleno = (Math.min(porcentaje, 100) / 100) * vuelta;
   return (
-    <section
-      role="note"
-      className="web-subir flex items-center gap-4 rounded-web bg-tinta px-6 py-4 text-white shadow-tarjeta"
-    >
-      <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white/10 text-aqua">
-        <IconEscudo width={20} height={20} />
-      </span>
-      <p className="text-web-sm">
-        <strong className="text-aqua">Ojo: </strong>
-        {NO_EXIME}
-      </p>
-    </section>
+    <span className="relative grid size-14 shrink-0 place-items-center">
+      <svg
+        viewBox="0 0 56 56"
+        className="absolute inset-0 -rotate-90"
+        aria-hidden="true"
+      >
+        <circle
+          cx="28"
+          cy="28"
+          r={r}
+          fill="none"
+          strokeWidth="6"
+          className="stroke-aqua/35"
+        />
+        <circle
+          cx="28"
+          cy="28"
+          r={r}
+          fill="none"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={`${lleno} ${vuelta}`}
+          className={`transition-[stroke-dasharray] duration-500 ${trazo}`}
+        />
+      </svg>
+      <span className="text-web-xs font-bold text-tinta">{porcentaje}%</span>
+    </span>
   );
 }
 
-function Tarjeta({
-  icono,
-  titulo,
-  subtitulo,
-  children,
-}: {
-  icono: ReactNode;
-  titulo: string;
-  subtitulo?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="tarjeta-web web-escalonado flex flex-col gap-5 p-6">
-      <EncabezadoTarjeta icono={icono} titulo={titulo} subtitulo={subtitulo} />
-      {children}
-    </section>
-  );
-}
-
-// ------------------------------------------------------------------------- avance
-
-function Avance({
-  avances,
-  ingresos,
-  listo,
-}: {
-  avances: AvanceTope[];
-  ingresos: number;
-  listo: boolean;
-}) {
-  return (
-    <Tarjeta
-      icono={<IconDocumento width={24} height={24} />}
-      titulo={`Tu avance en ${ANIO_GRAVABLE_EN_CURSO}`}
-      subtitulo="Lo cobrado con Trivo este año frente a cada tope"
-    >
-      <ul className="flex flex-col gap-6">
-        {avances.map((a) => (
-          <li key={a.id}>
-            <BarraTope a={a} ingresos={ingresos} listo={listo} />
-          </li>
-        ))}
-      </ul>
-      <p className="text-web-xs text-ink/60">
-        Solo suma lo que cobras con Trivo. Si vendes también por otros medios,
-        suma esos ingresos: los topes miran todo lo que ganas en el año.
-      </p>
-    </Tarjeta>
-  );
-}
-
-function BarraTope({
-  a,
-  ingresos,
-  listo,
-}: {
-  a: AvanceTope;
-  ingresos: number;
-  listo: boolean;
-}) {
+function TarjetaTope({ a, listo }: { a: AvanceTope; listo: boolean }) {
   const { porcentaje, restante, nivel } = a.progreso;
   const estilo = NIVEL[nivel];
-  const ancho = Math.min(porcentaje, 100);
-
+  const tope = TOPE[a.id] ?? {
+    Icono: IconDocumento,
+    tono: "primario" as const,
+    nombre: a.nombre,
+  };
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="font-bold text-tinta">{a.nombre}</h3>
-        <span className={`text-web-sm font-bold ${estilo.texto}`}>
-          {listo ? estilo.etiqueta : "…"}
-        </span>
-      </div>
-      <div
-        role="progressbar"
-        aria-label={a.nombre}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={ancho}
-        aria-valuetext={`${porcentaje}% del tope`}
-        className="h-3 overflow-hidden rounded-full bg-aqua/30"
-      >
-        <div
-          className={`h-full rounded-full transition-[width] duration-500 ${estilo.barra}`}
-          style={{ width: `${ancho}%` }}
-        />
-      </div>
-      <p className="text-web-sm text-ink/70">
-        <strong className="text-tinta">{pesosWeb(ingresos)}</strong> de{" "}
-        {pesosWeb(a.limite)} ({porcentaje}%)
-        {nivel === "superado" ? null : <> · te faltan {pesosWeb(restante)}</>}
-      </p>
-      <p className="text-web-xs text-ink/60">{a.descripcion}</p>
-      <p
-        className={`text-web-xs ${nivel === "ok" ? "text-ink/60" : `font-bold ${estilo.texto}`}`}
-        role={nivel === "ok" ? undefined : "alert"}
-      >
-        {SI_SUPERAS[a.id]}
-      </p>
-    </div>
+    <TarjetaDato
+      Icono={tope.Icono}
+      tono={tope.tono}
+      etiqueta={tope.nombre}
+      valor={listo ? estilo.etiqueta : "…"}
+      claseValor={estilo.texto}
+      esquina={
+        <Anillo porcentaje={listo ? porcentaje : 0} trazo={TRAZO[nivel]} />
+      }
+      detalle={
+        !listo ? undefined : nivel === "ok" ? (
+          <>Te faltan {pesosWeb(restante)}</>
+        ) : (
+          <span role="alert" className={`font-bold ${estilo.texto}`}>
+            {SI_SUPERAS[a.id]}
+          </span>
+        )
+      }
+    />
   );
 }
 
-// -------------------------------------------------------------------------- plazo
-
-function Plazo({ ahora }: { ahora: number }) {
+function FechaLimite({ ahora }: { ahora: number }) {
   const [digitos, setDigitos] = useDocumento();
   const hoy = hoyEnColombia(ahora);
   const plazo = plazoRenta(digitos);
   const estado = plazo ? estadoPlazo(plazo, hoy) : null;
-  const meses = plazo ? mesesDeRetraso(plazo, hoy) : 0;
+  const vencido = estado?.tipo === "vencido";
 
   return (
-    <Tarjeta
-      icono={<IconReloj width={24} height={24} />}
-      titulo={`Declaración de renta del año ${ANIO_GRAVABLE_A_DECLARAR}`}
-      subtitulo="Se presenta en agosto, septiembre y octubre de 2026"
-    >
-      <label className="flex flex-col gap-2 text-web-sm">
-        <span className="font-bold">
-          Dos últimos dígitos de tu cédula o NIT (sin el dígito de verificación)
-        </span>
-        <input
-          value={digitos}
-          onChange={(e) => setDigitos(soloDigitos(e.target.value, 2))}
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="00"
-          className="campo-web w-28 text-center font-bold tracking-[0.3em]"
-        />
-      </label>
-
-      {plazo && estado ? (
-        <div
-          className={`rounded-3xl p-5 text-web-sm ${
-            estado.tipo === "vencido" ? "bg-error/10" : "bg-aqua/12"
-          }`}
-          role={estado.tipo === "holgado" ? undefined : "alert"}
-        >
-          <p className="text-web-xs text-ink/60">Tu fecha límite</p>
-          <p className="text-medio font-extrabold text-tinta">
-            {new Date(`${plazo}T12:00:00-05:00`).toLocaleDateString("es-CO", {
+    <TarjetaDato
+      Icono={IconReloj}
+      tono="agua"
+      etiqueta={`Fecha para declarar renta ${ANIO_GRAVABLE_A_DECLARAR}`}
+      destacado
+      valor={
+        plazo
+          ? new Date(`${plazo}T12:00:00-05:00`).toLocaleDateString("es-CO", {
               day: "numeric",
               month: "long",
-              year: "numeric",
               timeZone: "America/Bogota",
-            })}
-          </p>
-          <p
-            className={`mt-1 font-bold ${estado.tipo === "vencido" ? "text-error" : "text-primary"}`}
+            })
+          : undefined
+      }
+      claseValor={vencido ? "text-error" : "text-tinta"}
+      esquina={
+        plazo ? (
+          <button
+            type="button"
+            onClick={() => setDigitos("")}
+            className="h-10 rounded-full bg-white/80 px-4 text-web-sm font-bold text-primary shadow-suave transition-colors duration-200 hover:bg-white"
+          >
+            Cambiar
+          </button>
+        ) : null
+      }
+      detalle={
+        estado ? (
+          <span
+            role={estado.tipo === "holgado" ? undefined : "alert"}
+            className={`font-bold ${vencido ? "text-error" : "text-primary"}`}
           >
             {estado.tipo === "vencido"
-              ? `Venció hace ${estado.dias} ${estado.dias === 1 ? "día" : "días"}. Si debías declarar, hazlo ya: ${meses} ${meses === 1 ? "mes" : "meses"} de retraso cuentan para la sanción.`
+              ? `Venció hace ${estado.dias} ${estado.dias === 1 ? "día" : "días"}. Declara cuanto antes.`
               : estado.tipo === "hoy"
-                ? "Vence hoy. No lo dejes para última hora."
+                ? "Vence hoy."
                 : `Faltan ${estado.dias} días.`}
-          </p>
-        </div>
-      ) : digitos.length === 2 ? null : (
-        <p className="text-web-xs text-ink/60">
-          Escribe los dos dígitos para ver tu fecha límite.
-        </p>
+          </span>
+        ) : undefined
+      }
+    >
+      {plazo ? null : (
+        <label className="mt-1 flex flex-col gap-2 text-web-sm">
+          <span className="text-ink/70">
+            Escribe los 2 últimos dígitos de tu cédula o NIT
+          </span>
+          <input
+            value={digitos}
+            onChange={(e) => setDigitos(soloDigitos(e.target.value, 2))}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="00"
+            className="campo-web max-w-28 text-center font-bold tracking-[0.3em]"
+          />
+        </label>
       )}
-
-      <p className="text-web-xs text-ink/60">
-        Fechas del calendario tributario DIAN 2026. Confírmalas en dian.gov.co:
-        si estás obligado a declarar y no lo has hecho, hazlo cuanto antes.
-      </p>
-    </Tarjeta>
+    </TarjetaDato>
   );
 }
 
-// -------------------------------------------------------------------------- multa
-
-function Multa({ ahora }: { ahora: number }) {
+function Multa({ ahora, ingresos }: { ahora: number; ingresos: number }) {
   const [digitos] = useDocumento();
   const plazo = plazoRenta(digitos);
   const sugeridos = plazo ? mesesDeRetraso(plazo, hoyEnColombia(ahora)) : 0;
-  const [ingresos, setIngresos] = useState("");
-  const [impuesto, setImpuesto] = useState("");
   const [meses, setMeses] = useState<number | null>(null);
-  const m = meses ?? Math.max(sugeridos, 1);
-
-  const ing = Number(ingresos) || 0;
-  const imp = Number(impuesto) || 0;
-  const tarde = multaExtemporanea({ ingresos: ing, impuesto: imp, meses: m });
-  const noDeclarar = multaPorNoDeclarar(ing);
+  const m = meses ?? Math.min(Math.max(sugeridos, 1), 12);
+  // Con lo cobrado en Trivo este año y sin impuesto a cargo: el caso más común.
+  const tarde = multaExtemporanea({ ingresos, impuesto: 0, meses: m });
+  const emplazado = multaPorNoDeclarar(ingresos);
 
   return (
-    <Tarjeta
-      icono={<IconEscudo width={24} height={24} />}
-      titulo="¿Cuánto puede costar no declarar?"
-      subtitulo="Estimación orientativa, sin intereses"
-    >
-      <div className="grid grid-cols-2 gap-4 text-web-sm">
-        <Campo
-          etiqueta="Ingresos del año ($)"
-          valor={ingresos}
-          alCambiar={(v) => setIngresos(soloDigitos(v, 11))}
+    <TarjetaDato
+      Icono={IconEscudo}
+      tono="tinta"
+      etiqueta="Si declaras tarde, pagarías"
+      valor={`≈ ${pesosWeb(tarde)}`}
+      esquina={
+        <Selector
+          etiqueta="Meses de retraso"
+          valor={String(m)}
+          onCambio={(v) => setMeses(Number(v))}
+          opciones={MESES}
+          compacto
         />
-        <Campo
-          etiqueta="Impuesto a cargo ($), si lo sabes"
-          valor={impuesto}
-          alCambiar={(v) => setImpuesto(soloDigitos(v, 11))}
-        />
-        <label className="col-span-2 flex flex-col gap-2">
-          <span className="font-bold">Meses de retraso</span>
-          <select
-            value={m}
-            onChange={(e) => setMeses(Number(e.target.value))}
-            className="campo-web"
-          >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n} {n === 1 ? "mes" : "meses"}
-                {n === 12 ? " o más" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <Resultado
-          titulo="Si declaras tarde por tu cuenta"
-          valor={tarde}
-          nota={
-            imp > 0
-              ? "5 % del impuesto por cada mes o fracción (máximo 100 %)."
-              : "0,5 % de tus ingresos por mes de retraso, con tope."
-          }
-        />
-        <Resultado
-          titulo="Si la DIAN te emplaza y sigues sin declarar"
-          valor={noDeclarar}
-          nota="20 % de tus ingresos (o de lo que ella conozca de ti)."
-          grave
-        />
-      </div>
-
-      <p className="text-web-xs text-ink/60">
-        Ninguna sanción baja de {pesosWeb(sancionMinima())} (10 UVT). Además se
-        cobran intereses por mora, y declarar tarde por tu cuenta siempre cuesta
-        menos que esperar a que te emplacen.
-      </p>
-    </Tarjeta>
-  );
-}
-
-function Campo({
-  etiqueta,
-  valor,
-  alCambiar,
-}: {
-  etiqueta: string;
-  valor: string;
-  alCambiar: (v: string) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-2">
-      <span className="font-bold">{etiqueta}</span>
-      <input
-        value={valor ? Number(valor).toLocaleString("es-CO") : ""}
-        onChange={(e) => alCambiar(e.target.value)}
-        inputMode="numeric"
-        autoComplete="off"
-        placeholder="0"
-        className="campo-web"
-      />
-    </label>
-  );
-}
-
-function Resultado({
-  titulo,
-  valor,
-  nota,
-  grave = false,
-}: {
-  titulo: string;
-  valor: number;
-  nota: string;
-  grave?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-3xl p-5 ${grave ? "bg-error/10" : "bg-aqua/12"}`}
-      aria-live="polite"
-    >
-      <p className="text-web-sm font-bold text-ink/70">{titulo}</p>
-      <p
-        className={`text-medio font-extrabold ${grave ? "text-error" : "text-primary"}`}
-      >
-        ≈ {pesosWeb(valor)}
-      </p>
-      <p className="text-web-xs text-ink/60">{nota}</p>
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------------- consejos
-
-function Consejos() {
-  return (
-    <Tarjeta
-      icono={<IconDocumento width={24} height={24} />}
-      titulo="Lo que debes saber"
-      subtitulo="Para no llevarte sorpresas con la DIAN"
-    >
-      <ul className="flex flex-col gap-4">
-        {CONSEJOS.map((c) => (
-          <li key={c.titulo} className="flex gap-3">
-            <span
-              className="mt-2 size-2.5 shrink-0 rounded-full bg-primary"
-              aria-hidden="true"
-            />
-            <p className="text-web-sm text-ink/70">
-              <strong className="text-tinta">{c.titulo}. </strong>
-              {c.texto}
-            </p>
-          </li>
-        ))}
-      </ul>
-    </Tarjeta>
+      }
+      detalle={
+        <>
+          Si esperas a que la DIAN te busque:{" "}
+          <strong className="text-error">≈ {pesosWeb(emplazado)}</strong>
+        </>
+      }
+    />
   );
 }

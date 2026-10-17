@@ -137,7 +137,7 @@ export function PanelCobrarWeb({
         <h2 id="titulo-monto" className="text-cuerpo font-bold text-tinta">
           Ingresa el monto
         </h2>
-        <p className="text-web-xs text-ink/60">
+        <p className="text-web-xs text-ink/70">
           Escribe el valor que vas a cobrar
         </p>
       </div>

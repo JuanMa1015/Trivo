@@ -158,10 +158,13 @@ export function RegistroForm() {
         }
       >
         <form
-          className="tarjeta-web web-paso mx-auto w-full max-w-140 text-web-sm"
+          className="tarjeta-web web-paso mx-auto w-full max-w-140 text-web-sm lg:max-w-180"
           onSubmit={registrar}
         >
-          <div className="flex flex-col gap-6 p-5 sm:p-8">{campos(true)}</div>
+          {/* En escritorio los campos van en dos columnas: el formulario cabe sin scroll. */}
+          <div className="grid grid-cols-1 gap-6 p-5 sm:p-8 lg:grid-cols-2 lg:gap-x-6 lg:gap-y-5">
+            {campos(true)}
+          </div>
           <div className="perforacion-web mx-4 sm:mx-6" />
           <div className="flex flex-col gap-4 px-5 pb-5 pt-4 sm:px-8 sm:pb-8 sm:pt-6">
             {aviso ? (
@@ -181,7 +184,7 @@ export function RegistroForm() {
             >
               {enviando ? "Creando…" : "Crear cuenta"}
             </button>
-            <p className="text-center text-web-xs text-ink/60">
+            <p className="text-center text-web-xs text-ink/70">
               ¿Ya tienes cuenta?{" "}
               <Link href="/acceso" className="font-bold text-primary">
                 Entra con tu PIN

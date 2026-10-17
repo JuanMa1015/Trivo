@@ -77,7 +77,7 @@ export function EncabezadoTarjeta({
           {titulo}
         </h2>
         {subtitulo ? (
-          <p className="line-clamp-2 text-web-xs text-ink/60 lg:truncate">
+          <p className="line-clamp-2 text-web-xs text-ink/70 lg:truncate">
             {subtitulo}
           </p>
         ) : null}

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { AyudaWallet } from "@/components/pago/ayuda-wallet";
+import { useIdioma } from "@/components/use-idioma";
 import { IconEscudo } from "@/components/icons";
 import { Sello } from "@/components/sello";
 import { PantallaWeb } from "@/components/web/contenedor";
@@ -60,7 +62,8 @@ export function PagoScreen({ token }: { token: string }) {
     1000,
   );
   const ahora = useAhora();
-  const [lang, setLang] = useState<Lang>("es");
+  // Se recuerda entre /pagar y el cobro, y la primera vez sigue al navegador.
+  const [lang, setLang] = useIdioma();
   const [wallet, setWallet] = useState(walletGuardada);
   const [tocado, setTocado] = useState(false);
   const [cotizacion, setCotizacion] = useState<CotizacionPublica | null>(null);
@@ -277,7 +280,9 @@ export function PagoScreen({ token }: { token: string }) {
 
           <dl className="flex flex-col gap-3">
             <Fila dato={t.venceEn}>
-              <span className="font-bold">
+              <span
+                className={`font-bold ${segundosRestantes(pago.venceEn, ahora) <= 60 ? "anim-latido text-error" : ""}`}
+              >
                 {formatearCuentaRegresiva(
                   segundosRestantes(pago.venceEn, ahora),
                 )}
@@ -388,6 +393,15 @@ export function PagoScreen({ token }: { token: string }) {
                 {tocado && !walletValida ? t.walletError : t.walletAyuda}
               </span>
             </label>
+          )}
+          {precio ? null : (
+            <AyudaWallet
+              lang={lang}
+              onPegar={(texto) => {
+                setWallet(texto);
+                setTocado(true);
+              }}
+            />
           )}
 
           {error ? (

@@ -21,17 +21,17 @@ export function TrazabilidadWeb({ eventos }: { eventos: readonly Evento[] }) {
         <span className="max-sm:sr-only">Historial de este cobro</span>
       </summary>
       <div className="tarjeta-web web-subir absolute right-0 top-full z-30 mt-2 flex max-h-80 w-[calc(100vw-3rem)] flex-col sm:w-md gap-3 overflow-y-auto bg-white p-5 text-web-sm sm:p-6">
-        <p className="text-ink/60">{eventos.length} eventos</p>
+        <p className="text-ink/70">{eventos.length} eventos</p>
         <ol className="flex flex-col gap-3">
           {eventos.map((e, i) => (
             <li key={`${e.tipo}-${i}`} className="flex items-start gap-4">
-              <time dateTime={e.en} className="w-20 shrink-0 text-ink/60">
+              <time dateTime={e.en} className="w-20 shrink-0 text-ink/70">
                 {hora.format(new Date(e.en))}
               </time>
               <span className="text-tinta">
                 {ETIQUETA_EVENTO[e.tipo]}
                 {e.detalle ? (
-                  <span className="block break-all text-ink/60">
+                  <span className="block break-all text-ink/70">
                     {e.detalle}
                   </span>
                 ) : null}

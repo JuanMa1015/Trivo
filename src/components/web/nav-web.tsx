@@ -9,6 +9,7 @@ import {
   IconWallet,
 } from "@/components/icons";
 import { LangToggle } from "@/components/lang-toggle";
+import { MenuComercio, PildoraRegistro } from "@/components/menu-comercio";
 import { Icono3D } from "@/components/web/icono-3d";
 import { LogoTrivo } from "@/components/web/marca";
 import type { Lang } from "@/lib/i18n";
@@ -16,7 +17,7 @@ import { usePerfil } from "@/lib/use-perfil";
 
 export type SeccionWeb = "cobrar" | "talonario" | "resumen" | "impuestos";
 
-const SECCIONES: {
+export const SECCIONES: {
   id: SeccionWeb;
   href: string;
   texto: string;
@@ -38,41 +39,24 @@ const SECCIONES: {
   },
 ];
 
-/** Iniciales del comercio para su avatar ("Almacén El Centro" → "AC"). */
-function iniciales(nombre: string): string {
-  return nombre
-    .split(/\s+/)
-    .filter((p) => p.length > 2)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
-}
-
 function Barra({ children }: { children: ReactNode }) {
   return (
-    <header className="nav-web flex h-16 items-center gap-3 px-4 lg:px-6 xl:gap-6">
+    <header className="nav-web relative z-30 flex h-16 items-center gap-3 px-4 lg:px-6 xl:gap-6">
       {children}
     </header>
   );
 }
 
-/** Barra del comercio: marca, secciones e identidad del comercio. */
+/**
+ * Barra del comercio: marca, secciones y la cuenta (usuario junto a su avatar). El
+ * comercio va en el banner, junto a la ubicación.
+ */
 export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
-  const { usuario, comercio } = usePerfil();
+  const { usuario, comercio, registrado, restantes, cargado } = usePerfil();
   return (
     <>
       <Barra>
-        <div className="flex min-w-0 items-center gap-3 lg:gap-4">
-          <LogoTrivo />
-          {usuario ? (
-            <span
-              className="max-w-24 truncate border-l border-ink/15 pl-3 text-web-xs font-semibold text-tinta sm:max-w-40 sm:text-web-sm lg:max-w-28 lg:pl-4 xl:max-w-40"
-              title={usuario}
-            >
-              {usuario}
-            </span>
-          ) : null}
-        </div>
+        <LogoTrivo />
         <nav aria-label="Secciones" className="hidden flex-1 lg:block">
           <ul className="flex gap-2">
             {SECCIONES.map(({ id, href, texto, Icono }) => {
@@ -85,7 +69,7 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
                     className={`flex h-11 items-center gap-2 rounded-full text-web-sm transition-colors duration-200 ${
                       activa
                         ? "bg-aqua/30 pl-1.5 pr-3 font-bold text-primary xl:pr-5"
-                        : "px-3 text-ink/60 hover:bg-aqua/10 hover:text-tinta xl:px-5"
+                        : "px-3 text-ink/70 hover:bg-aqua/10 hover:text-tinta xl:px-5"
                     }`}
                   >
                     {activa ? (
@@ -105,18 +89,17 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
           </ul>
         </nav>
         <div className="ml-auto flex min-w-0 items-center gap-3 lg:ml-0">
-          <span
-            className="max-w-28 truncate text-web-xs font-semibold text-tinta sm:max-w-44 sm:text-web-sm xl:max-w-72"
-            title={comercio}
-          >
-            {comercio}
-          </span>
-          <span
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-web-xs font-bold text-white"
-            aria-hidden="true"
-          >
-            {iniciales(comercio)}
-          </span>
+          {/* En el celular el recordatorio es la franja de arriba. */}
+          {cargado && !registrado && restantes !== null ? (
+            <span className="hidden lg:block">
+              <PildoraRegistro restantes={restantes} />
+            </span>
+          ) : null}
+          <MenuComercio
+            usuario={usuario}
+            comercio={comercio}
+            registrado={registrado}
+          />
         </div>
       </Barra>
 
@@ -134,7 +117,7 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
                   href={href}
                   aria-current={activa ? "page" : undefined}
                   className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] font-semibold transition-colors duration-200 ${
-                    activa ? "bg-aqua/30 text-primary" : "text-ink/60"
+                    activa ? "bg-aqua/30 text-primary" : "text-ink/70"
                   }`}
                 >
                   {activa ? (

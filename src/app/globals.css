@@ -447,6 +447,18 @@ body {
   right: -36px;
 }
 
+/* En el celular la perforación va a 16px del borde (mx-4): la muesca queda centrada
+   en el borde de la tarjeta y no se sale de la pantalla. */
+@media (max-width: 639.98px) {
+  .perforacion-web::before {
+    left: -28px;
+  }
+
+  .perforacion-web::after {
+    right: -28px;
+  }
+}
+
 /* Talones de la lista: cada fila separada por perforación con muescas. */
 .talon-web {
   position: relative;

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { alRepetirCobro } from "@/components/cobro/repetir-cobro";
 import { EscritorioCobrar } from "@/components/web/escritorio-cobrar";
 import type { Cobro } from "@/lib/cobros";
 import { aplicarTecla } from "@/lib/talonario";
@@ -18,6 +19,17 @@ export function TalonarioScreen() {
   const [error, setError] = useState(false);
 
   const monto = Number(digitos);
+
+  // "Cobrar de nuevo" desde un cobro vencido o fallido: llega con su monto y concepto.
+  // Corre cada vez que la pantalla vuelve a verse (Next la conserva montada).
+  useEffect(
+    () =>
+      alRepetirCobro((repetir) => {
+        setDigitos(String(repetir.monto));
+        setConcepto(repetir.concepto);
+      }),
+    [],
+  );
 
   async function cobrar() {
     if (monto <= 0 || creando) return;

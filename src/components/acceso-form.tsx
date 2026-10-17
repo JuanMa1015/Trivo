@@ -105,7 +105,7 @@ export function AccesoForm() {
             >
               {entrando ? "Entrando…" : "Entrar"}
             </button>
-            <p className="text-center text-web-xs text-ink/60">
+            <p className="text-center text-web-xs text-ink/70">
               ¿Primera vez?{" "}
               <Link href="/registro" className="font-bold text-primary">
                 Crea tu cuenta

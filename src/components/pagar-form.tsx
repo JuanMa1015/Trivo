@@ -2,17 +2,19 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useIdioma } from "@/components/use-idioma";
 import { IconEscudo } from "@/components/icons";
 import { PantallaWeb } from "@/components/web/contenedor";
 import { HeroWeb } from "@/components/web/hero-web";
 import { NavPagador } from "@/components/web/nav-web";
-import { textoDeError, textos, type Lang } from "@/lib/i18n";
+import { textoDeError, textos } from "@/lib/i18n";
 
 export function PagarForm() {
   const router = useRouter();
   // Si el regreso desde la wallet falló antes de saber de qué cobro era, llega aquí con ?e=.
   const errorRetorno = useSearchParams().get("e");
-  const [lang, setLang] = useState<Lang>("es");
+  // Se recuerda entre /pagar y el cobro, y la primera vez sigue al navegador.
+  const [lang, setLang] = useIdioma();
   const [codigo, setCodigo] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(errorRetorno);
