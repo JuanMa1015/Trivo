@@ -13,10 +13,10 @@ import { useAhora, usePolling } from "@/lib/use-polling";
  */
 
 export function registrarEvento(
-  numero: number,
+  id: string,
   tipo: "compartido_whatsapp" | "link_copiado",
 ) {
-  void fetch(`/api/cobros/${numero}/eventos`, {
+  void fetch(`/api/cobros/${id}/eventos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tipo }),
@@ -73,15 +73,12 @@ export function pagadorDe(cobro: Cobro): string | undefined {
  * @param alTerminarSimulacion Qué hacer cuando el pago simulado termina de cargar
  *   (~5 s). La pantalla del cobro vuelve al inicio, como siempre.
  */
-export function useCobroEnVivo(
-  numero: number,
-  alTerminarSimulacion?: () => void,
-) {
+export function useCobroEnVivo(id: string, alTerminarSimulacion?: () => void) {
   // Cada segundo: el vendedor debe ver el dinero llegar casi al instante.
   const { data, estado } = usePolling<{
     cobro: Cobro;
     modo: "demo" | "open-payments";
-  }>(`/api/cobros/${numero}`, 1000);
+  }>(`/api/cobros/${id}`, 1000);
   const ahora = useAhora();
   const [copiado, setCopiado] = useState(false);
   const [inicioSimulacion, setInicioSimulacion] = useState<number | null>(null);
@@ -116,7 +113,7 @@ export function useCobroEnVivo(
 
   async function simular() {
     setInicioSimulacion(Date.now());
-    const r = await fetch(`/api/cobros/${numero}/simular-pago`, {
+    const r = await fetch(`/api/cobros/${id}/simular-pago`, {
       method: "POST",
     });
     if (!r.ok) setInicioSimulacion(null);
@@ -127,7 +124,7 @@ export function useCobroEnVivo(
     try {
       await navigator.clipboard.writeText(enlaceDePago(cobro));
       setCopiado(true);
-      registrarEvento(numero, "link_copiado");
+      registrarEvento(id, "link_copiado");
       setTimeout(() => setCopiado(false), 2000);
     } catch {
       // Clipboard blocked: the code stays visible to read aloud.

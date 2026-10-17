@@ -38,6 +38,8 @@ export type ServicioPagos = {
   crearCobro(monto: number, concepto: string): Promise<Cobro>;
   listar(): Promise<CobroResumen[]>;
   obtener(numero: number): Promise<Cobro | undefined>;
+  /** El vendedor llega por el id aleatorio del cobro; el N.º solo se muestra. */
+  numeroDe(id: string): Promise<number | undefined>;
   registrarEvento(numero: number, tipo: TipoEvento): Promise<boolean>;
   /** Solo demo. */
   simularPago(numero: number): Promise<ResultadoPago>;
@@ -119,6 +121,7 @@ export function crearServicioDemo({
       const c = await repo.obtener(numero);
       return c && firmar(c, c.id, secreto);
     },
+    numeroDe: async (id) => (await repo.obtenerPorId(id))?.numero,
     registrarEvento: (numero, tipo) => repo.registrar(numero, tipo),
     simularPago: (numero) =>
       repo.iniciarPagoDemo(numero, "simulado por el vendedor (demo)"),
@@ -345,6 +348,7 @@ export function crearServicioOpenPayments({
       return c && firmar(c, c.id, secreto);
     },
 
+    numeroDe: async (id) => (await repo.obtenerPorId(id))?.numero,
     registrarEvento: (numero, tipo) => repo.registrar(numero, tipo),
 
     async simularPago() {

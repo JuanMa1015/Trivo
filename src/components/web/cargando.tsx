@@ -19,7 +19,7 @@ import { COMERCIO_EJEMPLO } from "@/lib/talonario";
  * Por debajo de lg no se ve nada, como antes.
  */
 
-/** /cobro/[numero] cargando: hero de Cobrar, teclado atenuado y código de pago vacío. */
+/** /cobro/[id] cargando: hero de Cobrar, teclado atenuado y código de pago vacío. */
 export function CobroCargando() {
   const enCamino = montoAnunciado();
   return (

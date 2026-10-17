@@ -43,7 +43,7 @@ export function TalonarioScreen() {
       setDigitos("");
       setConcepto("");
       setCreando(false);
-      router.push(`/cobro/${cobro.numero}`);
+      router.push(`/cobro/${cobro.id}`);
     } catch {
       setError(true);
       setCreando(false);

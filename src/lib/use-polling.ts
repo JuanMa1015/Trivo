@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Estado = "cargando" | "ok" | "no_encontrado" | "error";
@@ -7,6 +8,7 @@ type Lectura<T> = { data: T | null; estado: Estado };
 
 /** Consulta una URL cada `cadaMs` para mostrar el estado en vivo. */
 export function usePolling<T>(url: string, cadaMs: number): Lectura<T> {
+  const router = useRouter();
   const [lectura, setLectura] = useState<Lectura<T>>({
     data: null,
     estado: "cargando",
@@ -19,6 +21,10 @@ export function usePolling<T>(url: string, cadaMs: number): Lectura<T> {
       try {
         const r = await fetch(url, { cache: "no-store" });
         if (!activo) return;
+        if (r.status === 401) {
+          router.replace("/acceso");
+          return;
+        }
         if (r.status === 404) {
           setLectura({ data: null, estado: "no_encontrado" });
           return;
@@ -36,7 +42,7 @@ export function usePolling<T>(url: string, cadaMs: number): Lectura<T> {
       activo = false;
       clearInterval(id);
     };
-  }, [url, cadaMs]);
+  }, [url, cadaMs, router]);
 
   return lectura;
 }

@@ -25,14 +25,16 @@ const SALIDA_MS = 240;
 
 /** Detalle de un cobro dentro del talonario: misma lógica que la pantalla del cobro. */
 function DetalleCobro({
+  id,
   numero,
   onCerrar,
 }: {
-  numero: number;
+  id: string;
+  numero?: number;
   onCerrar: () => void;
 }) {
   // Sin redirección tras simular: el vendedor se queda en su talonario.
-  const vivo = useCobroEnVivo(numero);
+  const vivo = useCobroEnVivo(id);
   return <TarjetaCobroWeb numero={numero} vivo={vivo} onCerrar={onCerrar} />;
 }
 
@@ -49,7 +51,7 @@ export function TalonarioWebScreen() {
   const cobros = data?.cobros ?? [];
   const listo = data !== null;
 
-  const [elegido, setElegido] = useState<number | null>(null);
+  const [elegido, setElegido] = useState<string | null>(null);
   const [cerrando, setCerrando] = useState(false);
   const [cambio, setCambio] = useState(false);
   const abierto = elegido !== null && !cerrando;
@@ -63,11 +65,11 @@ export function TalonarioWebScreen() {
     }, SALIDA_MS);
   }
 
-  function elegir(numero: number) {
-    if (numero === elegido) return cerrar();
+  function elegir(id: string) {
+    if (id === elegido) return cerrar();
     setCambio(elegido !== null);
     setCerrando(false);
-    setElegido(numero);
+    setElegido(id);
   }
 
   const alPresionar = useEffectEvent((e: KeyboardEvent) => {
@@ -153,12 +155,12 @@ export function TalonarioWebScreen() {
             ) : (
               <ul className="flex min-h-0 flex-col overflow-y-auto overflow-x-hidden pb-2">
                 {cobros.map((c) => {
-                  const activo = elegido === c.numero && abierto;
+                  const activo = elegido === c.id && abierto;
                   return (
-                    <li key={c.numero} className="talon-web">
+                    <li key={c.id} className="talon-web">
                       <button
                         type="button"
-                        onClick={() => elegir(c.numero)}
+                        onClick={() => elegir(c.id)}
                         aria-expanded={activo}
                         aria-controls="detalle-cobro"
                         className={`grid min-h-18 w-full grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-5 gap-y-1 px-6 py-3 text-left text-web-sm transition-colors duration-200 @min-[640px]:grid-cols-[88px_minmax(0,1fr)_88px_160px_150px] ${
@@ -204,7 +206,11 @@ export function TalonarioWebScreen() {
                       : "web-detalle-entrar"
                 }`}
               >
-                <DetalleCobro numero={elegido} onCerrar={cerrar} />
+                <DetalleCobro
+                  id={elegido}
+                  numero={cobros.find((c) => c.id === elegido)?.numero}
+                  onCerrar={cerrar}
+                />
               </div>
             ) : null}
           </div>

@@ -105,7 +105,8 @@ export function TarjetaCobroWeb({
   vivo,
   onCerrar,
 }: {
-  numero: number;
+  /** N.º para el título mientras carga; el cobro se identifica por su id. */
+  numero?: number;
   vivo: CobroEnVivo;
   /** En el talonario: botón circular de cerrar. */
   onCerrar?: () => void;
@@ -128,7 +129,7 @@ export function TarjetaCobroWeb({
         encabezado={
           <EncabezadoTarjeta
             icono={<IconDocumento width={24} height={24} />}
-            titulo={`Cobro ${numeroDe(numero)}`}
+            titulo={numero ? `Cobro ${numeroDe(numero)}` : "Cobro"}
             acciones={cerrar}
           />
         }
@@ -327,9 +328,7 @@ export function TarjetaCobroWeb({
                 href={`https://wa.me/?text=${encodeURIComponent(mensajeDeCobro(cobro))}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() =>
-                  registrarEvento(cobro.numero, "compartido_whatsapp")
-                }
+                onClick={() => registrarEvento(cobro.id, "compartido_whatsapp")}
                 className="boton-web flex-1"
               >
                 <IconSend width={20} height={20} />

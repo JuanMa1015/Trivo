@@ -54,7 +54,11 @@ export async function leerCuerpo<T>(
   return { ok: true, data: resultado.data };
 }
 
-/** Número entero positivo de un segmento de ruta, o null. */
-export function enteroDeRuta(valor: string): number | null {
-  return /^\d{1,9}$/.test(valor) ? Number(valor) : null;
+/** Id aleatorio (UUID) de un segmento de ruta, o null. */
+export function uuidDeRuta(valor: string): string | null {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    valor,
+  )
+    ? valor
+    : null;
 }

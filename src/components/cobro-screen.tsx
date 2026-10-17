@@ -25,22 +25,18 @@ import { formatearPesos } from "@/lib/format";
 import { codigoAgrupado, horaDe } from "@/lib/talonario";
 import { SoloMovil } from "@/components/web/vista";
 
-export function CobroScreen({ numero }: { numero: number }) {
+export function CobroScreen({ id }: { id: string }) {
   const router = useRouter();
   // Sondeo, aviso al cobrar, copiar y simular: misma lógica de siempre, en un hook.
   // Tras simular el pago (~5 s) vuelve al inicio, como antes.
-  const vivo = useCobroEnVivo(numero, () => router.push("/"));
+  const vivo = useCobroEnVivo(id, () => router.push("/"));
   const { estado, cobro, ahora, copiado, copiar, simular } = vivo;
   const data = vivo.modo ? { modo: vivo.modo } : null;
   const cobrado = cobro?.estado === "cobrado";
 
   // Escritorio (lg): banner de Cobrar y dos columnas; a la derecha el ticket del cobro.
   const escritorio = (
-    <EscritorioCobro
-      numero={numero}
-      vivo={vivo}
-      noEncontrado={estado === "no_encontrado"}
-    />
+    <EscritorioCobro vivo={vivo} noEncontrado={estado === "no_encontrado"} />
   );
 
   if (estado === "no_encontrado") {
@@ -218,7 +214,7 @@ export function CobroScreen({ numero }: { numero: number }) {
                 href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => registrarEvento(numero, "compartido_whatsapp")}
+                onClick={() => registrarEvento(id, "compartido_whatsapp")}
                 className="flex h-16 items-center justify-center gap-3 rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
               >
                 <IconSend width={24} height={24} /> Enviar por WhatsApp

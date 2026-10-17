@@ -89,11 +89,12 @@ Ningún sistema elimina las estafas por completo. Esto es lo que Trivo hace, y l
 
 ### Variables de seguridad
 
+- `VENDEDOR_PIN`: clave del comercio, mínimo 8 caracteres. Obligatoria con Open Payments real (sin ella el área del vendedor responde 503); en demo, si no se define, queda abierta. Da una cookie de sesión de 12 horas (`HttpOnly`, `SameSite=Lax`, `Secure` con https) firmada con esta clave: cambiarla cierra todas las sesiones. Protege `/`, `/cobro/*` y `/api/cobros*`; el pagador (`/p`, `/pagar`, `/api/pago`) no la necesita. Los enlaces del vendedor usan el `id` aleatorio del cobro; el N.º 0001 solo se muestra.
 - `CONFIRMACION_SECRETO`: mínimo 32 caracteres. Obligatorio en producción con Open Payments real; en demo se usa uno aleatorio por proceso. Genera uno con `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
 
 ## Límites conocidos
 
-- La verificación del hash sigue la especificación GNAP; **no se ha comprobado contra la testnet**. Si la wallet calcula el hash con otra URL de grant, el retorno se rechazará con `retorno_invalido` y habrá que ajustar `verificarHashInteraccion`.
-- Con wallets de terceros, la testnet podría exigir interacción para las cotizaciones; hoy se asume que no.
-- La confirmación consulta el incoming payment; no usa webhooks.
-- No hay autenticación del vendedor todavía: antes de exponer el servidor hay que añadirla.
+- El hash del retorno está comprobado contra la testnet: es SHA-256 en **base64 estándar** (con `=`) sobre `nonceCliente`, `nonceAs`, `interact_ref` y la URL completa del servidor de autorización, uno por línea.
+- La confirmación consulta el incoming payment y el estado del pago saliente (`failed`); no usa webhooks. El protocolo no dice por qué falló un pago, así que Trivo no afirma que sea saldo insuficiente.
+- El acceso del vendedor es una sola clave para todo el comercio. Con cuentas reales (Supabase Auth) se reemplaza `server/vendedor.ts` y las rutas siguen llamando a `exigirVendedor`.
+- Los límites de intentos viven en memoria de un solo proceso y se apoyan en la IP que llega en `X-Forwarded-For`, que quien llame directo al puerto puede inventar. El acceso del vendedor tiene además un tope global; con varias instancias o un proxy confiable hay que moverlos a una base compartida.

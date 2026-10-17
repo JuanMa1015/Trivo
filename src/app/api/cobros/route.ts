@@ -2,11 +2,14 @@ import { connection } from "next/server";
 import { crearCobroSchema } from "@/lib/cobros";
 import { json, leerCuerpo, respuestaDeError } from "@/server/http";
 import { obtenerServicio } from "@/server/servicio";
+import { exigirVendedor } from "@/server/vendedor";
 
-// ponytail: sin autenticación del comercio todavía; añadir Supabase Auth antes de exponerlo.
+// Acceso del vendedor por clave (ver server/vendedor.ts); con cuentas reales vendrá Supabase Auth.
 
-export async function GET() {
+export async function GET(request: Request) {
   await connection();
+  const rechazo = exigirVendedor(request);
+  if (rechazo) return rechazo;
   try {
     return json({ cobros: await obtenerServicio().listar() });
   } catch (error) {
@@ -16,6 +19,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   await connection();
+  const rechazo = exigirVendedor(request);
+  if (rechazo) return rechazo;
   const cuerpo = await leerCuerpo(request, crearCobroSchema);
   if (!cuerpo.ok) return cuerpo.respuesta;
   try {

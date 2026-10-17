@@ -18,11 +18,9 @@ import { COMERCIO_EJEMPLO } from "@/lib/talonario";
  * interacción; a la derecha el cobro. Todo cabe sin scroll.
  */
 export function EscritorioCobro({
-  numero,
   vivo,
   noEncontrado,
 }: {
-  numero: number;
   vivo: CobroEnVivo;
   noEncontrado: boolean;
 }) {
@@ -61,7 +59,7 @@ export function EscritorioCobro({
             </Link>
           </section>
         ) : (
-          <TarjetaCobroWeb numero={numero} vivo={vivo} />
+          <TarjetaCobroWeb vivo={vivo} />
         )}
       </DosColumnasWeb>
     </PantallaWeb>
