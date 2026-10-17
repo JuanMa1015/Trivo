@@ -5,8 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { AyudaWallet } from "@/components/pago/ayuda-wallet";
 import { useIdioma } from "@/components/use-idioma";
-import { IconCheck, IconEscudo, IconLock } from "@/components/icons";
-import { LangToggle } from "@/components/lang-toggle";
+import { IconEscudo } from "@/components/icons";
 import { Sello } from "@/components/sello";
 import { PantallaWeb } from "@/components/web/contenedor";
 import { HeroWeb } from "@/components/web/hero-web";
@@ -23,8 +22,6 @@ import {
 import { formatearMonto } from "@/lib/format";
 import { textoDeError, textos, type Lang } from "@/lib/i18n";
 import { useAhora, usePolling } from "@/lib/use-polling";
-import { SoloMovil } from "@/components/web/vista";
-import { LogoTrivo } from "@/components/web/marca";
 
 const CLAVE_WALLET = "trivo.wallet";
 const LOCALE: Record<Lang, string> = { es: "es-CO", en: "en-US" };
@@ -123,15 +120,6 @@ export function PagoScreen({ token }: { token: string }) {
     setCargando(null); // modo demo: el sondeo muestra "procesando"
   }
 
-  const encabezado = (
-    <header className="flex items-center justify-between">
-      <LogoTrivo tamano={20} />
-      <LangToggle lang={lang} onChange={setLang} />
-    </header>
-  );
-  const contenedor =
-    "mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-10 pt-4 lg:hidden";
-
   /** Monto del cobro en COP, con el mismo formato que el móvil. */
   const montoCobro = pago
     ? formatearMonto(
@@ -161,11 +149,13 @@ export function PagoScreen({ token }: { token: string }) {
         key={paso}
         className="tarjeta-web web-paso mx-auto w-full max-w-140 text-web-sm"
       >
-        <div className="flex flex-col gap-5 p-8">{cuerpo}</div>
+        <div className="flex flex-col gap-5 p-5 sm:p-8">{cuerpo}</div>
         {talon ? (
           <>
-            <div className="perforacion-web mx-6" />
-            <div className="flex flex-col gap-4 px-8 pb-8 pt-6">{talon}</div>
+            <div className="perforacion-web mx-4 sm:mx-6" />
+            <div className="flex flex-col gap-4 px-5 pb-5 pt-4 sm:px-8 sm:pb-8 sm:pt-6">
+              {talon}
+            </div>
           </>
         ) : null}
       </article>
@@ -180,23 +170,6 @@ export function PagoScreen({ token }: { token: string }) {
   if (estado === "no_encontrado") {
     return (
       <>
-        <SoloMovil>
-          <main className={contenedor}>
-            {encabezado}
-            <section className="recibo flex flex-col items-start gap-4 p-5">
-              <h1 className="text-3xl font-bold leading-tight">
-                {t.codigoNoEncontrado}
-              </h1>
-              <p className="text-secondary/70">{t.codigoNoEncontradoAyuda}</p>
-              <Link
-                href="/pagar"
-                className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary text-lg font-bold text-white"
-              >
-                {t.otroCodigo}
-              </Link>
-            </section>
-          </main>
-        </SoloMovil>
         {enWeb(
           "no-encontrado",
           <>
@@ -214,38 +187,6 @@ export function PagoScreen({ token }: { token: string }) {
   if (pago.estado === "cobrado") {
     return (
       <>
-        <SoloMovil>
-          <main className={contenedor}>
-            {encabezado}
-            <section className="recibo flex flex-col items-start gap-4 p-5">
-              <Sello texto={t.exito} />
-              <p className="flex items-center gap-2 text-secondary/70">
-                <IconCheck width={20} height={20} className="text-primary" />
-                {t.exitoAyuda}
-              </p>
-
-              {pago.confirmacion ? (
-                <div className="w-full rounded-2xl bg-neutral p-4">
-                  <p className="text-sm font-bold text-secondary/70">
-                    {t.codigoConfirmacion}
-                  </p>
-                  <p className="mt-1 text-5xl font-bold tracking-[0.12em] text-primary">
-                    {pago.confirmacion}
-                  </p>
-                  <p className="mt-2 text-sm text-secondary/80">
-                    {t.confirmacionAyuda}
-                  </p>
-                </div>
-              ) : null}
-              <Link
-                href="/pagar"
-                className="font-bold text-primary underline underline-offset-4"
-              >
-                {t.nuevoPago}
-              </Link>
-            </section>
-          </main>
-        </SoloMovil>
         {enWeb(
           "cobrado",
           <div className="flex flex-col items-center gap-4 text-center">
@@ -277,25 +218,6 @@ export function PagoScreen({ token }: { token: string }) {
   if (pago.estado === "procesando") {
     return (
       <>
-        <SoloMovil>
-          <main className={contenedor}>
-            {encabezado}
-            <section
-              className="recibo flex flex-col gap-4 p-5"
-              aria-live="polite"
-            >
-              <h1 className="text-3xl font-bold leading-tight">{t.yendo}</h1>
-              <p className="text-secondary/70">{t.yendoAyuda}</p>
-              <div
-                className="h-2 overflow-hidden rounded-full bg-neutral"
-                role="progressbar"
-                aria-label={t.yendo}
-              >
-                <div className="anim-progreso h-full rounded-full bg-primary" />
-              </div>
-            </section>
-          </main>
-        </SoloMovil>
         {enWeb(
           "procesando",
           <div className="flex flex-col gap-2" aria-live="polite">
@@ -317,26 +239,6 @@ export function PagoScreen({ token }: { token: string }) {
   if (pago.estado === "fallido") {
     return (
       <>
-        <SoloMovil>
-          <main className={contenedor}>
-            {encabezado}
-            <section
-              className="recibo flex flex-col items-start gap-4 p-5"
-              role="alert"
-            >
-              <h1 className="text-3xl font-bold leading-tight text-critico">
-                {t.fallido}
-              </h1>
-              <p className="text-secondary/70">{t.fallidoAyuda}</p>
-              <Link
-                href="/pagar"
-                className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary text-lg font-bold text-white"
-              >
-                {t.otroCodigo}
-              </Link>
-            </section>
-          </main>
-        </SoloMovil>
         {enWeb(
           "fallido",
           <div className="flex flex-col gap-2" role="alert">
@@ -352,21 +254,6 @@ export function PagoScreen({ token }: { token: string }) {
   if (pago.estado === "vencido") {
     return (
       <>
-        <SoloMovil>
-          <main className={contenedor}>
-            {encabezado}
-            <section className="recibo flex flex-col items-start gap-4 p-5">
-              <h1 className="text-3xl font-bold leading-tight">{t.vencido}</h1>
-              <p className="text-secondary/70">{t.vencidoAyuda}</p>
-              <Link
-                href="/pagar"
-                className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary text-lg font-bold text-white"
-              >
-                {t.otroCodigo}
-              </Link>
-            </section>
-          </main>
-        </SoloMovil>
         {enWeb(
           "vencido",
           <>
@@ -386,210 +273,6 @@ export function PagoScreen({ token }: { token: string }) {
 
   return (
     <>
-      <SoloMovil>
-        <main className={contenedor}>
-          {encabezado}
-
-          <article className="recibo">
-            <div className="p-5">
-              {/* El nombre lo declara la wallet receptora: sirve para confirmar a quién se paga. */}
-              <p className="text-sm font-bold text-secondary/70">{t.pagasA}</p>
-              <p className="mt-1 wrap-break-words text-3xl font-bold leading-tight">
-                {pago.receptor}
-              </p>
-              {pago.receptorWallet ? (
-                <p className="mt-1 break-all text-sm text-secondary/70">
-                  {pago.receptorWallet.replace(/^https:\/\//, "")}
-                </p>
-              ) : null}
-              <p className="mt-2 text-sm font-bold text-secondary">
-                {t.confirmaNombre}
-              </p>
-              <p className="mt-3 text-5xl font-bold leading-none tracking-tight">
-                {formatearMonto(
-                  { valor: String(pago.monto * 100), codigo: "COP", escala: 2 },
-                  locale,
-                )}
-              </p>
-            </div>
-
-            <div className="perforacion" />
-
-            <dl className="flex flex-col gap-3 p-5">
-              <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
-                <dt>{t.venceEn}</dt>
-                <dd
-                  className={`font-bold ${segundosRestantes(pago.venceEn, ahora) <= 60 ? "anim-latido text-critico" : "text-secondary"}`}
-                >
-                  {formatearCuentaRegresiva(
-                    segundosRestantes(pago.venceEn, ahora),
-                  )}
-                </dd>
-              </div>
-
-              {precio ? (
-                <>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="font-bold">{t.tuPagas}</dt>
-                    <dd className="text-3xl font-bold text-primary">
-                      {formatearMonto(precio.debito, locale)}
-                    </dd>
-                  </div>
-                  {tasa ? (
-                    <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
-                      <dt>{t.tasa}</dt>
-                      <dd>
-                        1 {precio.debito.codigo} ={" "}
-                        {new Intl.NumberFormat(locale, {
-                          maximumFractionDigits: 0,
-                        }).format(tasa)}{" "}
-                        {precio.recibe.codigo}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {tasa && precio.tasaReferencia ? (
-                    <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
-                      <dt>{t.tasaReferencia}</dt>
-                      <dd>
-                        1 {precio.debito.codigo} ={" "}
-                        {new Intl.NumberFormat(locale, {
-                          maximumFractionDigits: 0,
-                        }).format(precio.tasaReferencia)}{" "}
-                        {precio.recibe.codigo}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {costo ? (
-                    <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
-                      <dt>{t.costoConversion}</dt>
-                      <dd className="font-bold text-secondary">
-                        ≈ {formatearMonto(costo.monto, locale)} (
-                        {new Intl.NumberFormat(locale, {
-                          maximumFractionDigits: 1,
-                        }).format(costo.porcentaje)}
-                        %)
-                      </dd>
-                    </div>
-                  ) : null}
-                  {precio.pagador ? (
-                    <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
-                      <dt>{t.desde}</dt>
-                      <dd className="wrap-break-words text-right font-bold text-secondary">
-                        {precio.pagador}
-                      </dd>
-                    </div>
-                  ) : null}
-                  <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
-                    <dt>{t.precioValido}</dt>
-                    <dd className="font-bold text-secondary">
-                      {formatearCuentaRegresiva(
-                        segundosRestantes(precio.venceEn, ahora),
-                      )}
-                    </dd>
-                  </div>
-                </>
-              ) : null}
-            </dl>
-          </article>
-
-          {precio ? (
-            <p className="text-sm text-secondary/70">
-              {t.sinComision}
-              {precio.tasaReferencia ? (
-                <>
-                  {" "}
-                  {t.fuenteTasa}{" "}
-                  <a
-                    href="https://www.exchangerate-api.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    ExchangeRate-API
-                  </a>
-                  .
-                </>
-              ) : null}
-            </p>
-          ) : null}
-
-          {precio ? null : (
-            <label className="flex flex-col gap-2">
-              <span className="font-bold">{t.tuWallet}</span>
-              <input
-                value={wallet}
-                onChange={(e) => setWallet(e.target.value.trim())}
-                onBlur={() => setTocado(true)}
-                inputMode="url"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="https://ilp.example.dev/tu-nombre"
-                aria-invalid={tocado && !walletValida}
-                aria-describedby="wallet-ayuda"
-                className="h-14 rounded-2xl bg-white px-4 shadow-sm placeholder:text-secondary/65"
-              />
-              <span
-                id="wallet-ayuda"
-                className={`text-sm ${tocado && !walletValida ? "font-bold text-critico" : "text-secondary/70"}`}
-              >
-                {tocado && !walletValida ? t.walletError : t.walletAyuda}
-              </span>
-            </label>
-          )}
-          {precio ? null : (
-            <AyudaWallet
-              lang={lang}
-              onPegar={(texto) => {
-                setWallet(texto);
-                setTocado(true);
-              }}
-            />
-          )}
-
-          {error ? (
-            <p role="alert" className="font-bold text-critico">
-              {textoDeError(t, error)}
-            </p>
-          ) : null}
-
-          <p className="flex items-start gap-2 text-base text-secondary/80">
-            <IconLock width={20} height={20} className="mt-0.5 shrink-0" />
-            {t.seguridad}
-          </p>
-
-          {precio ? (
-            <>
-              <button
-                type="button"
-                onClick={aprobar}
-                disabled={cargando !== null}
-                className="h-16 rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98] disabled:opacity-60"
-              >
-                {cargando === "aprobando" ? t.llevando : t.aprobar}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCotizacion(null)}
-                disabled={cargando !== null}
-                className="h-11 font-bold text-primary underline underline-offset-4"
-              >
-                {t.cambiarWallet}
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={verPrecio}
-              disabled={cargando !== null}
-              className="h-16 rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98] disabled:opacity-60"
-            >
-              {cargando === "cotizando" ? t.calculando : t.verPrecio}
-            </button>
-          )}
-        </main>
-      </SoloMovil>
-
       {enWeb(
         precio ? "precio" : "wallet",
         <>

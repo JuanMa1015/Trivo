@@ -113,7 +113,7 @@ export function EscritorioCobrar({
           onCobrar={cobrar}
           campoRef={campo}
         />
-        <TarjetaCobroVacia />
+        <TarjetaCobroVacia soloEscritorio />
       </DosColumnasWeb>
     </PantallaWeb>
   );

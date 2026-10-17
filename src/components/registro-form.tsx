@@ -7,7 +7,6 @@ import { IconEscudo } from "@/components/icons";
 import { PantallaWeb } from "@/components/web/contenedor";
 import { HeroWeb } from "@/components/web/hero-web";
 import { LogoTrivo } from "@/components/web/marca";
-import { SoloMovil } from "@/components/web/vista";
 import { LIMITE_COBROS_SIN_REGISTRO } from "@/lib/perfil";
 
 const MENSAJES: Record<string, string> = {
@@ -143,52 +142,31 @@ export function RegistroForm() {
 
   return (
     <>
-      <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-4 lg:hidden">
-          <header>
-            <LogoTrivo tamano={20} />
+      <PantallaWeb
+        nav={
+          <header className="nav-web flex h-16 items-center px-6">
+            <LogoTrivo />
           </header>
-          <form className="recibo flex flex-col gap-4 p-5" onSubmit={registrar}>
-            <h1 className="text-3xl font-bold leading-tight">{TITULO}</h1>
-            <p className="text-secondary/70">{AYUDA}</p>
-            {aviso ? (
-              <p role="status" className="font-bold text-primary">
-                {aviso}
-              </p>
-            ) : null}
-            {error ? (
-              <p role="alert" className="font-bold text-critico">
-                {error}
-              </p>
-            ) : null}
-            {campos(false)}
-            <button
-              type="submit"
-              disabled={!completo || enviando}
-              className="h-16 rounded-2xl bg-primary text-xl font-bold text-white transition-opacity disabled:opacity-40"
-            >
-              {enviando ? "Creando…" : "Crear cuenta"}
-            </button>
-            <p className="text-center text-sm text-secondary/70">
-              ¿Ya tienes cuenta?{" "}
-              <Link href="/acceso" className="font-bold text-primary">
-                Entra con tu PIN
-              </Link>
-            </p>
-          </form>
-        </main>
-      </SoloMovil>
-
-      <PantallaWeb nav={NAV} hero={heroCuenta(TITULO, AYUDA)}>
+        }
+        hero={
+          <HeroWeb
+            insignia="Tu cuenta"
+            IconoInsignia={IconEscudo}
+            titulo={TITULO}
+            subtitulo={AYUDA}
+          />
+        }
+      >
         <form
-          className="tarjeta-web web-paso mx-auto w-full max-w-180 text-web-sm"
+          className="tarjeta-web web-paso mx-auto w-full max-w-140 text-web-sm lg:max-w-180"
           onSubmit={registrar}
         >
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5 p-8">
+          {/* En escritorio los campos van en dos columnas: el formulario cabe sin scroll. */}
+          <div className="grid grid-cols-1 gap-6 p-5 sm:p-8 lg:grid-cols-2 lg:gap-x-6 lg:gap-y-5">
             {campos(true)}
           </div>
-          <div className="perforacion-web mx-6" />
-          <div className="flex flex-col gap-4 px-8 pb-8 pt-6">
+          <div className="perforacion-web mx-4 sm:mx-6" />
+          <div className="flex flex-col gap-4 px-5 pb-5 pt-4 sm:px-8 sm:pb-8 sm:pt-6">
             {aviso ? (
               <p role="status" className="font-bold text-primary">
                 {aviso}
@@ -236,55 +214,29 @@ function Campo({
   );
 }
 
-const NAV = (
-  <header className="nav-web flex h-16 items-center px-6">
-    <Link href="/" aria-label="Ir al inicio">
-      <LogoTrivo />
-    </Link>
-  </header>
-);
-
-function heroCuenta(titulo: string, subtitulo: string) {
-  return (
-    <HeroWeb
-      insignia="Tu cuenta"
-      IconoInsignia={IconEscudo}
-      titulo={titulo}
-      subtitulo={subtitulo}
-    />
-  );
-}
-
 function YaRegistrado() {
-  const texto = "Este comercio ya está registrado. Entra con tu PIN.";
   return (
-    <>
-      <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-4 lg:hidden">
-          <header>
-            <LogoTrivo tamano={20} />
-          </header>
-          <section className="recibo flex flex-col gap-4 p-5">
-            <h1 className="text-3xl font-bold leading-tight">
-              Ya tienes cuenta
-            </h1>
-            <p className="text-secondary/70">{texto}</p>
-            <Link
-              href="/acceso"
-              className="flex h-14 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-white"
-            >
-              Entrar
-            </Link>
-          </section>
-        </main>
-      </SoloMovil>
-      <PantallaWeb nav={NAV} hero={heroCuenta("Ya tienes cuenta", texto)}>
-        <section className="tarjeta-web web-paso mx-auto flex w-full max-w-140 flex-col gap-4 p-8 text-web-sm">
-          <Link href="/acceso" className="boton-web">
-            Entrar
-          </Link>
-        </section>
-      </PantallaWeb>
-    </>
+    <PantallaWeb
+      nav={
+        <header className="nav-web flex h-16 items-center px-4 lg:px-6">
+          <LogoTrivo />
+        </header>
+      }
+      hero={
+        <HeroWeb
+          insignia="Tu cuenta"
+          IconoInsignia={IconEscudo}
+          titulo="Ya tienes cuenta"
+          subtitulo="Este comercio ya está registrado."
+        />
+      }
+    >
+      <section className="tarjeta-web mx-auto flex w-full max-w-140 flex-col gap-5 p-5 text-web-sm sm:p-8">
+        <p className="text-ink/70">Entra con tu PIN para seguir cobrando.</p>
+        <Link href="/acceso" className="boton-web">
+          Entrar
+        </Link>
+      </section>
+    </PantallaWeb>
   );
 }

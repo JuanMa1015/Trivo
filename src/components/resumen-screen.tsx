@@ -1,6 +1,5 @@
 "use client";
 
-import { EncabezadoMovil } from "@/components/encabezado-movil";
 import { useState } from "react";
 import {
   IconDescargar,
@@ -34,8 +33,6 @@ import type { CobroResumen } from "@/lib/cobros";
 import { hoyEnColombia, mesAnterior, nombreDelPeriodo } from "@/lib/impuestos";
 import { usePerfil } from "@/lib/use-perfil";
 import { useAhora, usePolling } from "@/lib/use-polling";
-import { SoloMovil } from "@/components/web/vista";
-import { NavMovil } from "@/components/nav-movil";
 
 const TIPS = [
   {
@@ -77,18 +74,6 @@ export function ResumenScreen() {
 
   return (
     <>
-      <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-28 pt-4 font-[family-name:var(--font-web)] lg:hidden">
-          <EncabezadoMovil />
-          {aviso}
-          <Semana r={r} listo={listo} cifra={cifra} />
-          <Datos r={r} cifra={cifra} />
-          <Certificado ahora={ahora} />
-          <CarruselTips tips={TIPS} />
-        </main>
-        <NavMovil seccion="resumen" />
-      </SoloMovil>
-
       <PantallaWeb
         nav={<NavComercio seccion="resumen" />}
         hero={

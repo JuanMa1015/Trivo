@@ -1,7 +1,5 @@
 "use client";
 
-import { EncabezadoMovil } from "@/components/encabezado-movil";
-import { NavMovil } from "@/components/nav-movil";
 import { useState, useSyncExternalStore } from "react";
 import {
   IconDocumento,
@@ -17,7 +15,6 @@ import type { Tono3D } from "@/components/web/icono-3d";
 import { NavComercio } from "@/components/web/nav-web";
 import { Selector } from "@/components/web/selector";
 import { TarjetaDato } from "@/components/web/tarjeta-dato";
-import { SoloMovil } from "@/components/web/vista";
 import {
   ANIO_GRAVABLE_A_DECLARAR,
   ANIO_GRAVABLE_EN_CURSO,
@@ -183,19 +180,6 @@ export function ImpuestosScreen() {
 
   return (
     <>
-      <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-28 pt-4 font-[family-name:var(--font-web)] lg:hidden">
-          <EncabezadoMovil />
-          {aviso}
-          <div className="grid grid-cols-2 gap-4">{topes}</div>
-          {fecha}
-          {multa}
-          <CarruselTips titulo="Lo que debes saber" tips={TIPS} />
-          {pie}
-        </main>
-        <NavMovil seccion="impuestos" />
-      </SoloMovil>
-
       <PantallaWeb
         nav={<NavComercio seccion="impuestos" />}
         hero={
@@ -213,7 +197,7 @@ export function ImpuestosScreen() {
         }
       >
         {aviso}
-        <div className="web-escalonado grid min-h-0 flex-1 grid-cols-4 gap-(--separacion)">
+        <div className="web-escalonado grid min-h-0 flex-1 grid-cols-1 gap-(--separacion) sm:grid-cols-2 lg:grid-cols-4">
           {topes}
           {fecha}
           {multa}

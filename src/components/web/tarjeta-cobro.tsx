@@ -44,21 +44,25 @@ function Hoja({
   encabezado,
   cuerpo,
   talon,
+  clase = "",
 }: {
   encabezado: ReactNode;
   cuerpo: ReactNode;
   talon?: ReactNode;
+  clase?: string;
 }) {
   return (
-    <section className="tarjeta-web flex h-full min-h-0 flex-col">
-      <div className="flex flex-1 flex-col gap-4 p-6">
+    <section className={`tarjeta-web flex h-full min-h-0 flex-col ${clase}`}>
+      <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
         {encabezado}
         {cuerpo}
       </div>
       {talon ? (
         <>
-          <div className="perforacion-web mx-6" />
-          <div className="flex flex-col gap-3 px-6 pb-6 pt-4">{talon}</div>
+          <div className="perforacion-web mx-4 sm:mx-6" />
+          <div className="flex flex-col gap-3 px-4 pb-4 pt-4 sm:px-6 sm:pb-6">
+            {talon}
+          </div>
         </>
       ) : null}
     </section>
@@ -82,9 +86,17 @@ function VisorVacio({ texto }: { texto?: string }) {
 }
 
 /** Antes de cobrar: dónde aparece el código y por qué cobrar con Open Payments. */
-export function TarjetaCobroVacia({ numero }: { numero?: number }) {
+export function TarjetaCobroVacia({
+  numero,
+  soloEscritorio = false,
+}: {
+  numero?: number;
+  /** En Cobrar, el celular ya tiene el teclado: la tarjeta vacía solo estorba. */
+  soloEscritorio?: boolean;
+}) {
   return (
     <Hoja
+      clase={soloEscritorio ? "max-lg:hidden" : ""}
       encabezado={
         <EncabezadoTarjeta
           icono={<IconQr width={24} height={24} />}
@@ -93,11 +105,11 @@ export function TarjetaCobroVacia({ numero }: { numero?: number }) {
         />
       }
       cuerpo={
-        <div className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-8">
+        <div className="grid flex-1 grid-cols-1 items-center justify-items-center gap-6 lg:grid-cols-[auto_minmax(0,1fr)] lg:justify-items-stretch lg:gap-8">
           <VisorVacio
             texto={numero ? undefined : "Aquí aparece el código de tu cobro"}
           />
-          <div className="border-l border-ink/8 pl-8">
+          <div className="lg:border-l lg:border-ink/8 lg:pl-8">
             <VentajasOpenPayments />
           </div>
         </div>
@@ -187,7 +199,7 @@ export function TarjetaCobroWeb({
           className="web-escalonado flex flex-1 flex-col justify-center"
         >
           {esperando || procesando ? (
-            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-8">
+            <div className="grid grid-cols-1 items-center justify-items-center gap-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:justify-items-stretch lg:gap-8">
               <div className="visor-qr" data-atenuado={procesando}>
                 <Qr
                   texto={enlaceDePago(cobro)}
@@ -249,7 +261,7 @@ export function TarjetaCobroWeb({
           ) : null}
 
           {cobrado ? (
-            <div className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-8">
+            <div className="grid grid-cols-1 items-center gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
               <div className="flex flex-col items-center gap-2 text-center">
                 {/* El sello va solo, con aire alrededor, nunca sobre un monto o texto. */}
                 <div className="web-sello py-4">

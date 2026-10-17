@@ -16,11 +16,11 @@ const hora = new Intl.DateTimeFormat("es-CO", {
 export function TrazabilidadWeb({ eventos }: { eventos: readonly Evento[] }) {
   return (
     <details className="relative">
-      <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-full px-4 text-web-xs font-semibold text-tinta transition-colors duration-200 hover:bg-aqua/15">
+      <summary className="flex h-11 cursor-pointer list-none items-center justify-center gap-2 rounded-full px-3 text-web-xs sm:px-4 font-semibold text-tinta transition-colors duration-200 hover:bg-aqua/15">
         <IconHistorial width={18} height={18} className="text-primary" />
-        Historial de este cobro
+        <span className="max-sm:sr-only">Historial de este cobro</span>
       </summary>
-      <div className="tarjeta-web web-subir absolute right-0 top-full z-30 mt-2 flex max-h-80 w-md flex-col gap-3 overflow-y-auto bg-white p-6 text-web-sm">
+      <div className="tarjeta-web web-subir absolute right-0 top-full z-30 mt-2 flex max-h-80 w-[calc(100vw-3rem)] flex-col sm:w-md gap-3 overflow-y-auto bg-white p-5 text-web-sm sm:p-6">
         <p className="text-ink/70">{eventos.length} eventos</p>
         <ol className="flex flex-col gap-3">
           {eventos.map((e, i) => (
