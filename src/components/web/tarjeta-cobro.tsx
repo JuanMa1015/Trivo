@@ -18,6 +18,10 @@ import {
   IconReloj,
   IconSend,
 } from "@/components/icons";
+import {
+  AVISO_VENCE_S,
+  CobrarDeNuevo,
+} from "@/components/cobro/cobrar-de-nuevo";
 import { Qr } from "@/components/qr";
 import { Sello } from "@/components/sello";
 import { EncabezadoTarjeta } from "@/components/web/contenedor";
@@ -70,7 +74,7 @@ function VisorVacio({ texto }: { texto?: string }) {
           <Icono3D Icono={IconQr} tamano={64} />
         </span>
         {texto ? (
-          <p className="max-w-44 text-web-sm text-ink/60">{texto}</p>
+          <p className="max-w-44 text-web-sm text-ink/70">{texto}</p>
         ) : null}
       </div>
     </div>
@@ -149,6 +153,8 @@ export function TarjetaCobroWeb({
   const vencido = cobro.estado === "vencido";
   const fallido = cobro.estado === "fallido";
   const pagador = pagadorDe(cobro);
+  const restante = segundosRestantes(cobro.venceEn, ahora);
+  const porVencer = esperando && restante <= AVISO_VENCE_S;
   // Esperando y procesando comparten el cuerpo (el QR solo se atenúa); los demás entran de nuevo.
   const grupo = esperando || procesando ? "codigo" : cobro.estado;
 
@@ -189,33 +195,40 @@ export function TarjetaCobroWeb({
                 />
               </div>
               <div className="flex min-w-0 flex-col gap-3">
-                <p className="text-web-sm text-ink/60">
+                <p className="text-web-sm text-ink/70">
                   Dile este código a quien te paga
                 </p>
                 <p className="whitespace-nowrap text-grande font-extrabold tracking-[0.06em] text-primary">
                   {codigoAgrupado(cobro.codigo)}
                 </p>
-                <p className="text-web-sm text-ink/60">
+                <p className="text-web-sm text-ink/70">
                   O que escanee este QR con la cámara.
                 </p>
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   <EstadoChipWeb estado={cobro.estado} />
                   {esperando ? (
-                    <span className="flex items-center gap-1.5 text-web-sm text-ink/60">
+                    <span
+                      className={`flex items-center gap-1.5 text-web-sm ${porVencer ? "anim-latido font-bold text-error" : "text-ink/70"}`}
+                    >
                       <IconReloj width={16} height={16} />
                       Vence en{" "}
-                      <strong className="text-tinta">
-                        {formatearCuentaRegresiva(
-                          segundosRestantes(cobro.venceEn, ahora),
-                        )}
+                      <strong
+                        className={porVencer ? "text-error" : "text-tinta"}
+                      >
+                        {formatearCuentaRegresiva(restante)}
                       </strong>
                     </span>
                   ) : (
-                    <span className="anim-latido text-web-sm text-ink/60">
+                    <span className="anim-latido text-web-sm text-ink/70">
                       Confirmando el pago…
                     </span>
                   )}
                 </div>
+                {porVencer ? (
+                  <p role="status" className="text-web-sm text-error">
+                    Queda menos de un minuto.
+                  </p>
+                ) : null}
                 {procesando ? (
                   <div
                     className="h-2 overflow-hidden rounded-full bg-aqua/30"
@@ -226,7 +239,7 @@ export function TarjetaCobroWeb({
                   </div>
                 ) : null}
                 {pagador ? (
-                  <p className="text-web-sm text-ink/60">
+                  <p className="text-web-sm text-ink/70">
                     Quien paga:{" "}
                     <strong className="break-all text-tinta">{pagador}</strong>
                   </p>
@@ -242,11 +255,11 @@ export function TarjetaCobroWeb({
                 <div className="web-sello py-4">
                   <Sello texto="Cobrado" />
                 </div>
-                <p className="text-web-sm text-ink/60">
+                <p className="text-web-sm text-ink/70">
                   Se sumó a tu historial. Descarga tu comprobante abajo.
                 </p>
                 {pagador ? (
-                  <p className="text-web-sm text-ink/60">
+                  <p className="text-web-sm text-ink/70">
                     Pagó:{" "}
                     <strong className="break-all text-tinta">{pagador}</strong>
                   </p>
@@ -254,13 +267,13 @@ export function TarjetaCobroWeb({
               </div>
               {cobro.confirmacion ? (
                 <div className="flex flex-col gap-2 rounded-3xl bg-aqua/12 p-6">
-                  <p className="text-web-sm font-bold text-ink/60">
+                  <p className="text-web-sm font-bold text-ink/70">
                     Código de confirmación
                   </p>
                   <p className="text-grande font-extrabold tracking-[0.12em] text-primary">
                     {cobro.confirmacion}
                   </p>
-                  <p className="text-web-sm text-ink/60">
+                  <p className="text-web-sm text-ink/70">
                     El cliente debe ver el mismo código en su pantalla. Si es
                     distinto, no entregues nada todavía.
                   </p>
@@ -272,7 +285,7 @@ export function TarjetaCobroWeb({
           {vencido ? (
             <div className="flex flex-col items-center gap-4 text-center">
               <EstadoChipWeb estado="vencido" />
-              <p className="text-web-sm text-ink/60">
+              <p className="text-web-sm text-ink/70">
                 Venció a las {horaDe(cobro.venceEn)}. Crea uno nuevo.
               </p>
             </div>
@@ -297,11 +310,11 @@ export function TarjetaCobroWeb({
         <>
           <dl className="flex gap-8 text-web-sm">
             <div className="flex gap-2">
-              <dt className="text-ink/60">Hora</dt>
+              <dt className="text-ink/70">Hora</dt>
               <dd className="font-bold text-tinta">{horaDe(cobro.creadoEn)}</dd>
             </div>
             <div className="flex gap-2">
-              <dt className="text-ink/60">Concepto</dt>
+              <dt className="text-ink/70">Concepto</dt>
               <dd className="font-bold text-tinta">
                 {cobro.concepto || "Sin concepto"}
               </dd>
@@ -344,6 +357,18 @@ export function TarjetaCobroWeb({
               ) : null}
             </div>
           ) : null}
+          {vencido || fallido ? (
+            <div className="flex gap-3">
+              <CobrarDeNuevo
+                monto={cobro.monto}
+                concepto={cobro.concepto}
+                className="boton-web flex-1"
+              />
+              <Link href="/" className="boton-web-borde flex-1">
+                Nuevo cobro
+              </Link>
+            </div>
+          ) : null}
           {cobrado ? (
             <div className="flex flex-wrap gap-3">
               <a
@@ -362,7 +387,7 @@ export function TarjetaCobroWeb({
               </a>
             </div>
           ) : null}
-          {cobrado || vencido || fallido ? (
+          {cobrado ? (
             <Link href="/" className="boton-web">
               Nuevo cobro
             </Link>

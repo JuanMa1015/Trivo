@@ -156,3 +156,44 @@ export const IconHistorial = (p: SVGProps<SVGSVGElement>) => (
     <path d="M3 3v5h5M12 7v5l3 2" />
   </Icon>
 );
+
+export const IconSalir = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+    <path d="M10 17 5 12l5-5M5 12h11" />
+  </Icon>
+);
+
+export const IconChevron = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="m6 9 6 6 6-6" />
+  </Icon>
+);
+
+export const IconPegar = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="8" y="3" width="8" height="4" rx="1" />
+    <path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+  </Icon>
+);
+
+export const IconRepetir = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M20 12a8 8 0 1 1-2.3-5.7L20 8" />
+    <path d="M20 3v5h-5" />
+  </Icon>
+);
+
+export const IconDescargar = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M12 4v11m-5-5 5 5 5-5" />
+    <path d="M5 20h14" />
+  </Icon>
+);
+
+export const IconUsuario = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21a8 8 0 0 1 16 0" />
+  </Icon>
+);

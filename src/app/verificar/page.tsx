@@ -6,6 +6,7 @@ import {
   nombreDelMes,
 } from "@/server/certificado";
 import { secretoConfirmacion } from "@/server/confirmacion";
+import { VerificarVista } from "@/components/verificar-vista";
 
 export const metadata = { title: "Verificar certificado · Trivo" };
 
@@ -38,56 +39,20 @@ async function Resultado({ searchParams }: PageProps<"/verificar">) {
     );
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-6">
-      <span className="text-xl font-bold tracking-tight text-primary">
-        Trivo
-      </span>
-      {valido && p.success ? (
-        <section className="recibo flex flex-col gap-4 p-5" role="status">
-          <h1 className="text-3xl font-bold leading-tight text-primary">
-            Certificado auténtico
-          </h1>
-          <p className="text-secondary/70">
-            Estos datos coinciden con lo que Trivo firmó. Nadie los cambió.
-          </p>
-          <dl className="flex flex-col gap-3">
-            <Fila etiqueta="Comercio" valor={p.data.n} />
-            {p.data.u ? <Fila etiqueta="Titular" valor={p.data.u} /> : null}
-            <Fila etiqueta="Periodo" valor={nombreDelMes(p.data.p)} />
-            <Fila etiqueta="Cobros recibidos" valor={String(p.data.k)} />
-            <Fila
-              etiqueta="Total cobrado"
-              valor={`$ ${p.data.t.toLocaleString("es-CO")} COP`}
-            />
-            <Fila etiqueta="Emitido el" valor={p.data.e} />
-          </dl>
-          <p className="text-sm text-secondary/70">
-            Resume los cobros recibidos con Trivo según sus registros. No es un
-            certificado contable ni sustituye declaraciones ante la DIAN.
-          </p>
-        </section>
-      ) : (
-        <section className="recibo flex flex-col gap-4 p-5" role="alert">
-          <h1 className="text-3xl font-bold leading-tight text-critico">
-            No pudimos verificarlo
-          </h1>
-          <p className="text-secondary/70">
-            El código no coincide con los datos del enlace, o el enlace está
-            incompleto. Pide al comercio un certificado nuevo y no confíes en
-            este.
-          </p>
-        </section>
-      )}
-    </main>
-  );
-}
-
-function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  return (
-    <div>
-      <dt className="text-sm text-secondary/70">{etiqueta}</dt>
-      <dd className="break-words text-lg font-bold">{valor}</dd>
-    </div>
+    <VerificarVista
+      datos={
+        valido && p.success
+          ? {
+              comercio: p.data.n,
+              titular: p.data.u || undefined,
+              periodo: nombreDelMes(p.data.p),
+              cobros: p.data.k,
+              total: p.data.t,
+              emitido: p.data.e,
+            }
+          : null
+      }
+    />
   );
 }
 

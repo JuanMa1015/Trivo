@@ -269,6 +269,13 @@ Todo lo anterior describe el móvil, que no cambia por debajo de `lg`. Desde `lg
 - **Marca**: la "T" de Trivo (`MarcaT`) en degradado de agua a primario; en el hero, marcas "T" blancas que flotan muy despacio.
 - **Formas**: tarjetas de 28 px de radio; botones y campos de 18 px; teclas de 16 px; chips y avatar en píldora.
 
+### Marca
+
+- **Ícono** (`MarcaT`): "T" con la barra en dos tonos (teal `#007A93` y cian `#45CDE0`, separados en diagonal) y el tallo con corte inclinado. Variante `claro` (blanco) para el hero.
+- **Logotipo** (`PalabraTrivo`): "Trivo" en marino `#0B1A33` con el punto de la i en teal. `LogoTrivo` junta ícono y logotipo; se usa en la barra de escritorio y en las cabeceras móviles.
+- **Ícono de la app**: `src/app/icon.svg` (pestaña del navegador) y `src/app/apple-icon.tsx` (pantalla de inicio de iPhone), la "T" sobre marino.
+- Los colores de la marca solo viven en el logo; la interfaz conserva su paleta.
+
 ### Estructura de cada pantalla
 
 1. **Barra superior** (`NavComercio` / `NavPagador`): logo, secciones Cobrar · Talonario · Resumen con ícono (la activa sobre agua) e identidad del comercio (nombre e iniciales). El pagador ve logo y ES | EN.

@@ -146,9 +146,7 @@ export function RegistroForm() {
       <SoloMovil>
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-4 lg:hidden">
           <header>
-            <span className="text-xl font-bold tracking-tight text-primary">
-              Trivo
-            </span>
+            <LogoTrivo tamano={20} />
           </header>
           <form className="recibo flex flex-col gap-4 p-5" onSubmit={registrar}>
             <h1 className="text-3xl font-bold leading-tight">{TITULO}</h1>
@@ -181,26 +179,14 @@ export function RegistroForm() {
         </main>
       </SoloMovil>
 
-      <PantallaWeb
-        nav={
-          <header className="nav-web flex h-16 items-center px-6">
-            <LogoTrivo />
-          </header>
-        }
-        hero={
-          <HeroWeb
-            insignia="Tu cuenta"
-            IconoInsignia={IconEscudo}
-            titulo={TITULO}
-            subtitulo={AYUDA}
-          />
-        }
-      >
+      <PantallaWeb nav={NAV} hero={heroCuenta(TITULO, AYUDA)}>
         <form
-          className="tarjeta-web web-paso mx-auto w-full max-w-140 text-web-sm"
+          className="tarjeta-web web-paso mx-auto w-full max-w-180 text-web-sm"
           onSubmit={registrar}
         >
-          <div className="flex flex-col gap-6 p-8">{campos(true)}</div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 p-8">
+            {campos(true)}
+          </div>
           <div className="perforacion-web mx-6" />
           <div className="flex flex-col gap-4 px-8 pb-8 pt-6">
             {aviso ? (
@@ -220,7 +206,7 @@ export function RegistroForm() {
             >
               {enviando ? "Creando…" : "Crear cuenta"}
             </button>
-            <p className="text-center text-web-xs text-ink/60">
+            <p className="text-center text-web-xs text-ink/70">
               ¿Ya tienes cuenta?{" "}
               <Link href="/acceso" className="font-bold text-primary">
                 Entra con tu PIN
@@ -250,21 +236,55 @@ function Campo({
   );
 }
 
-function YaRegistrado() {
+const NAV = (
+  <header className="nav-web flex h-16 items-center px-6">
+    <Link href="/" aria-label="Ir al inicio">
+      <LogoTrivo />
+    </Link>
+  </header>
+);
+
+function heroCuenta(titulo: string, subtitulo: string) {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-4">
-      <section className="recibo flex flex-col gap-4 p-5">
-        <h1 className="text-3xl font-bold leading-tight">Ya tienes cuenta</h1>
-        <p className="text-secondary/70">
-          Este comercio ya está registrado. Entra con tu PIN.
-        </p>
-        <Link
-          href="/acceso"
-          className="flex h-14 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-white"
-        >
-          Entrar
-        </Link>
-      </section>
-    </main>
+    <HeroWeb
+      insignia="Tu cuenta"
+      IconoInsignia={IconEscudo}
+      titulo={titulo}
+      subtitulo={subtitulo}
+    />
+  );
+}
+
+function YaRegistrado() {
+  const texto = "Este comercio ya está registrado. Entra con tu PIN.";
+  return (
+    <>
+      <SoloMovil>
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-4 lg:hidden">
+          <header>
+            <LogoTrivo tamano={20} />
+          </header>
+          <section className="recibo flex flex-col gap-4 p-5">
+            <h1 className="text-3xl font-bold leading-tight">
+              Ya tienes cuenta
+            </h1>
+            <p className="text-secondary/70">{texto}</p>
+            <Link
+              href="/acceso"
+              className="flex h-14 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-white"
+            >
+              Entrar
+            </Link>
+          </section>
+        </main>
+      </SoloMovil>
+      <PantallaWeb nav={NAV} hero={heroCuenta("Ya tienes cuenta", texto)}>
+        <section className="tarjeta-web web-paso mx-auto flex w-full max-w-140 flex-col gap-4 p-8 text-web-sm">
+          <Link href="/acceso" className="boton-web">
+            Entrar
+          </Link>
+        </section>
+      </PantallaWeb>
+    </>
   );
 }

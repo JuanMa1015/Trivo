@@ -2,19 +2,22 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useIdioma } from "@/components/use-idioma";
 import { LangToggle } from "@/components/lang-toggle";
 import { IconEscudo } from "@/components/icons";
 import { PantallaWeb } from "@/components/web/contenedor";
 import { HeroWeb } from "@/components/web/hero-web";
 import { NavPagador } from "@/components/web/nav-web";
-import { textoDeError, textos, type Lang } from "@/lib/i18n";
+import { textoDeError, textos } from "@/lib/i18n";
 import { SoloMovil } from "@/components/web/vista";
+import { LogoTrivo } from "@/components/web/marca";
 
 export function PagarForm() {
   const router = useRouter();
   // Si el regreso desde la wallet falló antes de saber de qué cobro era, llega aquí con ?e=.
   const errorRetorno = useSearchParams().get("e");
-  const [lang, setLang] = useState<Lang>("es");
+  // Se recuerda entre /pagar y el cobro, y la primera vez sigue al navegador.
+  const [lang, setLang] = useIdioma();
   const [codigo, setCodigo] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(errorRetorno);
@@ -59,9 +62,7 @@ export function PagarForm() {
       <SoloMovil>
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-4 lg:hidden">
           <header className="flex items-center justify-between">
-            <span className="text-xl font-bold tracking-tight text-primary">
-              Trivo
-            </span>
+            <LogoTrivo tamano={20} />
             <LangToggle lang={lang} onChange={setLang} />
           </header>
 

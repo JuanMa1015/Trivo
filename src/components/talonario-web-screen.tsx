@@ -1,9 +1,11 @@
 "use client";
 
 import { EncabezadoMovil } from "@/components/encabezado-movil";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useCobroEnVivo } from "@/components/cobro/use-cobro-en-vivo";
+import { NavMovil } from "@/components/nav-movil";
 import { TalonarioLista } from "@/components/talonario-lista";
+import { agruparPorDia, cobrosDeHoy } from "@/components/talonario/por-dia";
 import Link from "next/link";
 import { IconDocumento, IconWallet } from "@/components/icons";
 import {
@@ -54,18 +56,30 @@ export function TalonarioWebScreen() {
   );
   const cobros = data?.cobros ?? [];
   const listo = data !== null;
+  const grupos = agruparPorDia(cobros);
+  const deHoy = cobrosDeHoy(cobros);
 
   const [elegido, setElegido] = useState<string | null>(null);
   const [cerrando, setCerrando] = useState(false);
   const [cambio, setCambio] = useState(false);
   const abierto = elegido !== null && !cerrando;
+  const detalle = useRef<HTMLDivElement>(null);
+
+  // Foco: al abrir un cobro pasa al detalle; al cerrarlo vuelve a su fila.
+  useEffect(() => {
+    if (elegido !== null) detalle.current?.focus({ preventScroll: true });
+  }, [elegido]);
 
   function cerrar() {
     if (elegido === null || cerrando) return;
+    const fila = elegido;
     setCerrando(true);
     setTimeout(() => {
       setElegido(null);
       setCerrando(false);
+      document
+        .querySelector<HTMLButtonElement>(`[data-fila="${fila}"]`)
+        ?.focus();
     }, SALIDA_MS);
   }
 
@@ -88,7 +102,7 @@ export function TalonarioWebScreen() {
   return (
     <>
       <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-10 pt-4 lg:hidden">
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-28 pt-4 lg:hidden">
           <EncabezadoMovil />
           <TalonarioLista
             cobros={cobros}
@@ -96,6 +110,7 @@ export function TalonarioWebScreen() {
             conError={estado === "error"}
           />
         </main>
+        <NavMovil seccion="talonario" />
       </SoloMovil>
 
       <PantallaWeb
@@ -108,8 +123,8 @@ export function TalonarioWebScreen() {
             subtitulo="Cada cobro queda registrado en tu historial."
             comercio={comercio}
             tarjeta={{
-              rotulo: "Cobrado",
-              valor: pesosWeb(totalCobrado(cobros)),
+              rotulo: "Cobrado hoy",
+              valor: pesosWeb(totalCobrado(deHoy)),
             }}
           />
         }
@@ -131,7 +146,7 @@ export function TalonarioWebScreen() {
                 titulo={<span id="titulo-talonario">Talonario de hoy</span>}
                 subtitulo={
                   listo
-                    ? `${cobros.length} ${cobros.length === 1 ? "cobro" : "cobros"}`
+                    ? `${deHoy.length} ${deHoy.length === 1 ? "cobro" : "cobros"} hoy`
                     : undefined
                 }
               />
@@ -139,7 +154,7 @@ export function TalonarioWebScreen() {
             {listo && cobros.length === 0 ? (
               <div className="web-escalonado flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
                 <Icono3D Icono={IconDocumento} tono="cielo" tamano={80} />
-                <p className="max-w-xs text-web-sm text-ink/60">
+                <p className="max-w-xs text-web-sm text-ink/70">
                   Tu primer comprobante aparece aquí cuando cobres.
                 </p>
                 <Link href="/" className="boton-web w-auto px-8">
@@ -148,47 +163,60 @@ export function TalonarioWebScreen() {
                 </Link>
               </div>
             ) : (
-              <ul className="flex min-h-0 flex-col overflow-y-auto overflow-x-hidden pb-2">
-                {cobros.map((c) => {
-                  const activo = elegido === c.id && abierto;
-                  return (
-                    <li key={c.id} className="talon-web">
-                      <button
-                        type="button"
-                        onClick={() => elegir(c.id)}
-                        aria-expanded={activo}
-                        aria-controls="detalle-cobro"
-                        className={`grid min-h-18 w-full grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-5 gap-y-1 px-6 py-3 text-left text-web-sm transition-colors duration-200 @min-[640px]:grid-cols-[88px_minmax(0,1fr)_88px_160px_150px] ${
-                          activo ? "bg-aqua/20" : "hover:bg-aqua/8"
-                        }`}
-                      >
-                        {/* Talón: número separado por una línea punteada, como en papel. */}
-                        <span className="row-span-2 flex h-full items-center border-r-2 border-dashed border-ink/12 font-bold text-tinta @min-[640px]:row-span-1">
-                          #{String(c.numero).padStart(4, "0")}
-                        </span>
-                        <span className="truncate font-semibold text-tinta">
-                          {c.concepto || "Sin concepto"}
-                        </span>
-                        <span className="col-start-2 row-start-2 text-ink/60 @min-[640px]:col-start-auto @min-[640px]:row-start-auto">
-                          {horaDe(c.creadoEn)}
-                        </span>
-                        <span className="col-start-3 row-start-1 text-right text-cuerpo font-extrabold text-tinta @min-[640px]:col-start-auto @min-[640px]:row-start-auto">
-                          {pesosWeb(c.monto)}
-                        </span>
-                        <span className="col-start-3 row-start-2 justify-self-end @min-[640px]:col-start-auto @min-[640px]:row-start-auto">
-                          <EstadoChipWeb estado={c.estado} />
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="flex min-h-0 flex-col overflow-y-auto overflow-x-hidden pb-2">
+                {grupos.map((grupo) => (
+                  <section key={grupo.dia} aria-label={grupo.titulo}>
+                    <h3 className="sticky top-0 z-10 bg-papel px-6 pb-2 pt-4 text-web-xs font-bold uppercase tracking-[0.08em] text-ink/70">
+                      {grupo.titulo}
+                    </h3>
+                    <ul>
+                      {grupo.cobros.map((c) => {
+                        const activo = elegido === c.id && abierto;
+                        return (
+                          <li key={c.id} className="talon-web">
+                            <button
+                              type="button"
+                              data-fila={c.id}
+                              onClick={() => elegir(c.id)}
+                              aria-expanded={activo}
+                              aria-controls="detalle-cobro"
+                              className={`grid min-h-18 w-full grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-5 gap-y-1 px-6 py-3 text-left text-web-sm transition-colors duration-200 @min-[640px]:grid-cols-[88px_minmax(0,1fr)_88px_160px_150px] ${
+                                activo ? "bg-aqua/20" : "hover:bg-aqua/8"
+                              }`}
+                            >
+                              {/* Talón: número separado por una línea punteada, como en papel. */}
+                              <span className="row-span-2 flex h-full items-center border-r-2 border-dashed border-ink/12 font-bold text-tinta @min-[640px]:row-span-1">
+                                #{String(c.numero).padStart(4, "0")}
+                              </span>
+                              <span className="truncate font-semibold text-tinta">
+                                {c.concepto || "Sin concepto"}
+                              </span>
+                              <span className="col-start-2 row-start-2 text-ink/70 @min-[640px]:col-start-auto @min-[640px]:row-start-auto">
+                                {horaDe(c.creadoEn)}
+                              </span>
+                              <span className="col-start-3 row-start-1 text-right text-cuerpo font-extrabold text-tinta @min-[640px]:col-start-auto @min-[640px]:row-start-auto">
+                                {pesosWeb(c.monto)}
+                              </span>
+                              <span className="col-start-3 row-start-2 justify-self-end @min-[640px]:col-start-auto @min-[640px]:row-start-auto">
+                                <EstadoChipWeb estado={c.estado} />
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             )}
           </section>
 
           <div
             id="detalle-cobro"
-            className="min-w-0 max-h-[calc(100dvh-80px-var(--hero-alto)-var(--separacion)*3)] self-stretch"
+            ref={detalle}
+            tabIndex={-1}
+            aria-label="Detalle del cobro"
+            className="min-w-0 outline-none max-h-[calc(100dvh-80px-var(--hero-alto)-var(--separacion)*3)] self-stretch"
           >
             {elegido !== null ? (
               <div

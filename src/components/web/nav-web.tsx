@@ -9,6 +9,7 @@ import {
   IconWallet,
 } from "@/components/icons";
 import { LangToggle } from "@/components/lang-toggle";
+import { MenuComercio, PildoraRegistro } from "@/components/menu-comercio";
 import { Icono3D } from "@/components/web/icono-3d";
 import { LogoTrivo } from "@/components/web/marca";
 import type { Lang } from "@/lib/i18n";
@@ -16,7 +17,7 @@ import { usePerfil } from "@/lib/use-perfil";
 
 export type SeccionWeb = "cobrar" | "talonario" | "resumen" | "impuestos";
 
-const SECCIONES: {
+export const SECCIONES: {
   id: SeccionWeb;
   href: string;
   texto: string;
@@ -38,40 +39,23 @@ const SECCIONES: {
   },
 ];
 
-/** Iniciales del comercio para su avatar ("Almacén El Centro" → "AC"). */
-function iniciales(nombre: string): string {
-  return nombre
-    .split(/\s+/)
-    .filter((p) => p.length > 2)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
-}
-
 function Barra({ children }: { children: ReactNode }) {
   return (
-    <header className="nav-web flex h-16 items-center gap-3 px-6 xl:gap-6">
+    <header className="nav-web relative z-30 flex h-16 items-center gap-3 px-6 xl:gap-6">
       {children}
     </header>
   );
 }
 
-/** Barra del comercio: marca, secciones e identidad del comercio. */
+/**
+ * Barra del comercio: marca, secciones y la cuenta (usuario junto a su avatar). El
+ * comercio va en el banner, junto a la ubicación.
+ */
 export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
-  const { usuario, comercio } = usePerfil();
+  const { usuario, comercio, registrado, restantes, cargado } = usePerfil();
   return (
     <Barra>
-      <div className="flex items-center gap-4">
-        <LogoTrivo />
-        {usuario ? (
-          <span
-            className="max-w-28 truncate border-l xl:max-w-40 border-ink/15 pl-4 text-web-sm font-semibold text-tinta"
-            title={usuario}
-          >
-            {usuario}
-          </span>
-        ) : null}
-      </div>
+      <LogoTrivo />
       <nav aria-label="Secciones" className="flex-1">
         <ul className="flex gap-2">
           {SECCIONES.map(({ id, href, texto, Icono }) => {
@@ -84,7 +68,7 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
                   className={`flex h-11 items-center gap-2 rounded-full text-web-sm transition-colors duration-200 ${
                     activa
                       ? "bg-aqua/30 pl-1.5 pr-5 font-bold text-primary"
-                      : "px-5 text-ink/60 hover:bg-aqua/10 hover:text-tinta"
+                      : "px-5 text-ink/70 hover:bg-aqua/10 hover:text-tinta"
                   }`}
                 >
                   {activa ? (
@@ -99,20 +83,14 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
           })}
         </ul>
       </nav>
-      <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="max-w-44 truncate text-web-sm font-semibold text-tinta xl:max-w-72"
-          title={comercio}
-        >
-          {comercio}
-        </span>
-        <span
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-web-xs font-bold text-white"
-          aria-hidden="true"
-        >
-          {iniciales(comercio)}
-        </span>
-      </div>
+      {cargado && !registrado && restantes !== null ? (
+        <PildoraRegistro restantes={restantes} />
+      ) : null}
+      <MenuComercio
+        usuario={usuario}
+        comercio={comercio}
+        registrado={registrado}
+      />
     </Barra>
   );
 }

@@ -22,6 +22,11 @@ import {
 import { EscritorioCobro } from "@/components/web/escritorio-cobro";
 import { formatearCuentaRegresiva, segundosRestantes } from "@/lib/cobros";
 import { formatearPesos } from "@/lib/format";
+import { pesosWeb } from "@/components/web/formato";
+import {
+  AVISO_VENCE_S,
+  CobrarDeNuevo,
+} from "@/components/cobro/cobrar-de-nuevo";
 import { codigoAgrupado, horaDe } from "@/lib/talonario";
 import { SoloMovil } from "@/components/web/vista";
 
@@ -83,6 +88,7 @@ export function CobroScreen({ id }: { id: string }) {
   const vencido = cobro.estado === "vencido";
   const fallido = cobro.estado === "fallido";
   const restante = segundosRestantes(cobro.venceEn, ahora);
+  const porVencer = esperando && restante <= AVISO_VENCE_S;
 
   return (
     <>
@@ -99,7 +105,7 @@ export function CobroScreen({ id }: { id: string }) {
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-5xl font-bold leading-none tracking-tight">
-                  {formatearPesos(cobro.monto)}
+                  {pesosWeb(cobro.monto)}
                 </p>
                 <span className="shrink-0 pt-1 text-sm font-bold text-secondary/70">
                   N.º {String(cobro.numero).padStart(4, "0")}
@@ -136,11 +142,20 @@ export function CobroScreen({ id }: { id: string }) {
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <EstadoChip estado={cobro.estado} />
                 {esperando ? (
-                  <span className="text-sm text-secondary/70">
+                  <span
+                    className={`text-sm ${porVencer ? "anim-latido font-bold text-critico" : "text-secondary/70"}`}
+                  >
                     Vence en{" "}
-                    <strong className="text-secondary">
+                    <strong
+                      className={porVencer ? "text-critico" : "text-secondary"}
+                    >
                       {formatearCuentaRegresiva(restante)}
                     </strong>
+                  </span>
+                ) : null}
+                {porVencer ? (
+                  <span role="status" className="text-sm text-critico">
+                    Queda menos de un minuto.
                   </span>
                 ) : null}
                 {procesando ? (
@@ -243,6 +258,13 @@ export function CobroScreen({ id }: { id: string }) {
             </div>
           ) : null}
 
+          {vencido || fallido ? (
+            <CobrarDeNuevo
+              monto={cobro.monto}
+              concepto={cobro.concepto}
+              className="flex h-16 items-center justify-center gap-3 rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
+            />
+          ) : null}
           {cobrado ? (
             <div className="flex flex-col gap-3">
               <a
@@ -265,7 +287,11 @@ export function CobroScreen({ id }: { id: string }) {
           {cobrado || vencido || fallido ? (
             <Link
               href="/"
-              className="flex h-16 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
+              className={
+                cobrado
+                  ? "flex h-16 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
+                  : "flex h-14 items-center justify-center rounded-2xl bg-white text-lg font-bold shadow-sm active:scale-[0.98]"
+              }
             >
               Nuevo cobro
             </Link>

@@ -81,7 +81,7 @@ export function EncabezadoTarjeta({
       <div className="min-w-0 flex-1">
         <h2 className="truncate text-cuerpo font-bold text-tinta">{titulo}</h2>
         {subtitulo ? (
-          <p className="truncate text-web-xs text-ink/60">{subtitulo}</p>
+          <p className="truncate text-web-xs text-ink/70">{subtitulo}</p>
         ) : null}
       </div>
       {acciones ? (

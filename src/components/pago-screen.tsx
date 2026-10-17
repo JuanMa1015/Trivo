@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { AyudaWallet } from "@/components/pago/ayuda-wallet";
+import { useIdioma } from "@/components/use-idioma";
 import { IconCheck, IconEscudo, IconLock } from "@/components/icons";
 import { LangToggle } from "@/components/lang-toggle";
 import { Sello } from "@/components/sello";
@@ -22,6 +24,7 @@ import { formatearMonto } from "@/lib/format";
 import { textoDeError, textos, type Lang } from "@/lib/i18n";
 import { useAhora, usePolling } from "@/lib/use-polling";
 import { SoloMovil } from "@/components/web/vista";
+import { LogoTrivo } from "@/components/web/marca";
 
 const CLAVE_WALLET = "trivo.wallet";
 const LOCALE: Record<Lang, string> = { es: "es-CO", en: "en-US" };
@@ -62,7 +65,8 @@ export function PagoScreen({ token }: { token: string }) {
     1000,
   );
   const ahora = useAhora();
-  const [lang, setLang] = useState<Lang>("es");
+  // Se recuerda entre /pagar y el cobro, y la primera vez sigue al navegador.
+  const [lang, setLang] = useIdioma();
   const [wallet, setWallet] = useState(walletGuardada);
   const [tocado, setTocado] = useState(false);
   const [cotizacion, setCotizacion] = useState<CotizacionPublica | null>(null);
@@ -121,9 +125,7 @@ export function PagoScreen({ token }: { token: string }) {
 
   const encabezado = (
     <header className="flex items-center justify-between">
-      <span className="text-xl font-bold tracking-tight text-primary">
-        Trivo
-      </span>
+      <LogoTrivo tamano={20} />
       <LangToggle lang={lang} onChange={setLang} />
     </header>
   );
@@ -392,7 +394,7 @@ export function PagoScreen({ token }: { token: string }) {
             <div className="p-5">
               {/* El nombre lo declara la wallet receptora: sirve para confirmar a quién se paga. */}
               <p className="text-sm font-bold text-secondary/70">{t.pagasA}</p>
-              <p className="mt-1 break-words text-3xl font-bold leading-tight">
+              <p className="mt-1 wrap-break-words text-3xl font-bold leading-tight">
                 {pago.receptor}
               </p>
               {pago.receptorWallet ? (
@@ -416,7 +418,9 @@ export function PagoScreen({ token }: { token: string }) {
             <dl className="flex flex-col gap-3 p-5">
               <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
                 <dt>{t.venceEn}</dt>
-                <dd className="font-bold text-secondary">
+                <dd
+                  className={`font-bold ${segundosRestantes(pago.venceEn, ahora) <= 60 ? "anim-latido text-critico" : "text-secondary"}`}
+                >
                   {formatearCuentaRegresiva(
                     segundosRestantes(pago.venceEn, ahora),
                   )}
@@ -470,7 +474,7 @@ export function PagoScreen({ token }: { token: string }) {
                   {precio.pagador ? (
                     <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
                       <dt>{t.desde}</dt>
-                      <dd className="break-words text-right font-bold text-secondary">
+                      <dd className="wrap-break-words text-right font-bold text-secondary">
                         {precio.pagador}
                       </dd>
                     </div>
@@ -533,6 +537,15 @@ export function PagoScreen({ token }: { token: string }) {
               </span>
             </label>
           )}
+          {precio ? null : (
+            <AyudaWallet
+              lang={lang}
+              onPegar={(texto) => {
+                setWallet(texto);
+                setTocado(true);
+              }}
+            />
+          )}
 
           {error ? (
             <p role="alert" className="font-bold text-critico">
@@ -584,7 +597,9 @@ export function PagoScreen({ token }: { token: string }) {
 
           <dl className="flex flex-col gap-3">
             <Fila dato={t.venceEn}>
-              <span className="font-bold">
+              <span
+                className={`font-bold ${segundosRestantes(pago.venceEn, ahora) <= 60 ? "anim-latido text-error" : ""}`}
+              >
                 {formatearCuentaRegresiva(
                   segundosRestantes(pago.venceEn, ahora),
                 )}
@@ -695,6 +710,15 @@ export function PagoScreen({ token }: { token: string }) {
                 {tocado && !walletValida ? t.walletError : t.walletAyuda}
               </span>
             </label>
+          )}
+          {precio ? null : (
+            <AyudaWallet
+              lang={lang}
+              onPegar={(texto) => {
+                setWallet(texto);
+                setTocado(true);
+              }}
+            />
           )}
 
           {error ? (

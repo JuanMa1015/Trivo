@@ -69,9 +69,7 @@ export function AccesoForm() {
       <SoloMovil>
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-4 lg:hidden">
           <header>
-            <span className="text-xl font-bold tracking-tight text-primary">
-              Trivo
-            </span>
+            <LogoTrivo tamano={20} />
           </header>
 
           <form className="recibo flex flex-col gap-4 p-5" onSubmit={alEnviar}>
@@ -146,7 +144,7 @@ export function AccesoForm() {
             >
               {entrando ? "Entrando…" : "Entrar"}
             </button>
-            <p className="text-center text-web-xs text-ink/60">
+            <p className="text-center text-web-xs text-ink/70">
               ¿Primera vez?{" "}
               <Link href="/registro" className="font-bold text-primary">
                 Crea tu cuenta

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { RecordatorioRegistro } from "@/components/recordatorio-registro";
+import { AvisoConexion } from "@/components/aviso-conexion";
 import "./globals.css";
 
 // Fuente del diseño de escritorio. Se aloja con la app (el navegador no llama a
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={null}>
           <RecordatorioRegistro />
         </Suspense>
+        <AvisoConexion />
         {children}
       </body>
     </html>

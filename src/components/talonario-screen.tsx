@@ -1,14 +1,15 @@
 "use client";
 
 import { EncabezadoMovil } from "@/components/encabezado-movil";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { alRepetirCobro } from "@/components/cobro/repetir-cobro";
 import { Keypad } from "@/components/keypad";
+import { NavMovil } from "@/components/nav-movil";
 import { TalonarioLista } from "@/components/talonario-lista";
 import { EscritorioCobrar } from "@/components/web/escritorio-cobrar";
 import type { Cobro, CobroResumen } from "@/lib/cobros";
-import { formatearPesos } from "@/lib/format";
+import { pesosWeb } from "@/components/web/formato";
 import { CONCEPTOS, aplicarTecla } from "@/lib/talonario";
 import { usePolling } from "@/lib/use-polling";
 import { SoloMovil } from "@/components/web/vista";
@@ -23,6 +24,17 @@ export function TalonarioScreen() {
   const [concepto, setConcepto] = useState("");
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState(false);
+
+  // "Cobrar de nuevo" desde un cobro vencido o fallido: llega con su monto y concepto.
+  // Corre cada vez que la pantalla vuelve a verse (Next la conserva montada).
+  useEffect(
+    () =>
+      alRepetirCobro((repetir) => {
+        setDigitos(String(repetir.monto));
+        setConcepto(repetir.concepto);
+      }),
+    [],
+  );
 
   const cobros = data?.cobros ?? [];
   const listo = data !== null;
@@ -62,12 +74,8 @@ export function TalonarioScreen() {
   return (
     <>
       <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-10 pt-4 lg:hidden">
-          <EncabezadoMovil>
-            <Link href="/impuestos" className="font-bold text-primary">
-              Impuestos
-            </Link>
-          </EncabezadoMovil>
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-28 pt-4 lg:hidden">
+          <EncabezadoMovil />
 
           <div className="pila">
             <div className="pila-hoja" aria-hidden="true" />
@@ -80,7 +88,7 @@ export function TalonarioScreen() {
                   }`}
                   aria-live="polite"
                 >
-                  {formatearPesos(monto)}
+                  {pesosWeb(monto)}
                 </p>
               </div>
 
@@ -140,6 +148,7 @@ export function TalonarioScreen() {
             conError={estado === "error"}
           />
         </main>
+        <NavMovil seccion="cobrar" />
       </SoloMovil>
 
       {/* Escritorio (lg): mismos estados y handlers que el móvil. */}

@@ -44,7 +44,7 @@ export function VentajasOpenPayments() {
             <span className="block text-web-sm font-bold text-tinta">
               {titulo}
             </span>
-            <span className="block text-web-xs text-ink/60">{texto}</span>
+            <span className="block text-web-xs text-ink/70">{texto}</span>
           </span>
         </li>
       ))}
