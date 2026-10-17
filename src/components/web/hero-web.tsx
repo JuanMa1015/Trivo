@@ -1,5 +1,6 @@
-import type { ComponentType, ReactNode, SVGProps } from "react";
+import type { ComponentType, CSSProperties, ReactNode, SVGProps } from "react";
 import { IconUbicacion } from "@/components/icons";
+import { Icono3D } from "@/components/web/icono-3d";
 import { MarcasHero } from "@/components/web/marca";
 
 /**
@@ -33,8 +34,8 @@ export function HeroWeb({
       <MarcasHero />
 
       <div className="relative flex min-w-0 flex-1 flex-col items-start gap-2">
-        <span className="hero-insignia flex h-8 items-center gap-2 rounded-full bg-white/60 px-3 text-web-xs font-semibold text-primary">
-          <IconoInsignia width={16} height={16} />
+        <span className="hero-insignia flex h-9 items-center gap-2 rounded-full bg-white/70 py-1 pl-1 pr-3 text-web-xs font-semibold text-primary">
+          <Icono3D Icono={IconoInsignia} tamano={28} />
           {insignia}
         </span>
         <h1 className="hero-titulo max-w-xl text-titulo font-extrabold text-tinta">
@@ -48,20 +49,22 @@ export function HeroWeb({
       </div>
 
       {comercio ? (
-        <p className="relative flex items-start gap-2 self-end pb-8 text-web-sm font-semibold text-tinta">
-          <IconUbicacion width={20} height={20} className="text-primary" />
+        <p className="relative flex items-center gap-2 self-end pb-8 text-web-sm font-semibold text-tinta">
+          <Icono3D Icono={IconUbicacion} tono="cielo" tamano={32} />
           {comercio}
         </p>
       ) : null}
 
       {tarjeta ? (
-        <div className="hero-tarjeta cristal-web relative flex w-72 shrink-0 items-end justify-between gap-4 px-6 py-5">
-          <div className="min-w-0">
+        <div className="hero-tarjeta cristal-web relative flex w-80 shrink-0 items-end justify-between gap-4 px-6 py-5 2xl:w-96">
+          {/* La cifra se achica según su largo: un monto grande nunca se corta. */}
+          <div className="contenedor-cifra min-w-0 flex-1">
             {tarjeta.rotulo ? (
               <p className="text-web-xs text-tinta/70">{tarjeta.rotulo}</p>
             ) : null}
             <p
-              className="truncate text-titulo font-extrabold text-tinta"
+              className="cifra-ajustable font-extrabold text-tinta"
+              style={{ "--caracteres": tarjeta.valor.length } as CSSProperties}
               aria-live={tarjeta.enVivo ? "polite" : undefined}
             >
               {tarjeta.valor}

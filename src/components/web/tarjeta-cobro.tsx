@@ -21,6 +21,7 @@ import {
 import { Qr } from "@/components/qr";
 import { Sello } from "@/components/sello";
 import { EncabezadoTarjeta } from "@/components/web/contenedor";
+import { Icono3D } from "@/components/web/icono-3d";
 import { EstadoChipWeb } from "@/components/web/estado-chip";
 import { TrazabilidadWeb } from "@/components/web/trazabilidad-web";
 import { VentajasOpenPayments } from "@/components/web/ventajas";
@@ -65,7 +66,9 @@ function VisorVacio({ texto }: { texto?: string }) {
   return (
     <div className="visor-qr">
       <div className="qr-hueco grid place-items-center content-center gap-3 text-center">
-        <IconQr width={36} height={36} className="mx-auto text-primary" />
+        <span className="mx-auto">
+          <Icono3D Icono={IconQr} tamano={64} />
+        </span>
         {texto ? (
           <p className="max-w-44 text-web-sm text-ink/60">{texto}</p>
         ) : null}
