@@ -37,3 +37,4 @@ _Completar por el equipo a medida que avance el proyecto._
 
 - Ningún secreto en el repo (`private.key`, `.env*`).
 - Todo cambio generado por IA se revisa antes de hacer commit.
+  | `src/lib/perfil.ts`, `src/server/cobros-repo-*.ts`, `src/app/api/certificado`, `src/components/impuestos-screen.tsx`, `src/components/resumen-screen.tsx`, `src/components/web/modal.tsx`, `src/app/globals.css` | Certificado solo desde el mes en que empezó el comercio (perfil con `creadoEn`, validado también en la API, con tests), calculadora de multa en un modal con los ingresos del año que se declara y aviso de sanción mínima, información de los topes al pasar el mouse, textos más cortos y estilos compartidos (píldora y opción). Prompts en `prompts/02-pulido-marca-auditoria-ux.md` | Samuel Rojas, Juan Manuel Londoño |
