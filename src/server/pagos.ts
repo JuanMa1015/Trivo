@@ -13,6 +13,7 @@ import {
 } from "@/lib/cobros";
 import { codigoConfirmacion, secretoConfirmacion } from "./confirmacion";
 import type { ConfigOpenPayments } from "./open-payments/config";
+import type { TasaReferencia } from "./tasas";
 import { ErrorPago, type CodigoError } from "./open-payments/errores";
 import type { DatosWallet, PuertoOpenPayments } from "./open-payments/puerto";
 import {
@@ -181,6 +182,7 @@ export function crearServicioDemo({
         pagador: null,
         debito,
         recibe,
+        tasaReferencia: null,
         venceEn,
       };
     },
@@ -206,6 +208,8 @@ export function crearServicioDemo({
 // ------------------------------------------------------ Open Payments real
 
 type DepsReal = Deps & {
+  /** Solo para mostrar el costo de conversión; si falla, el precio se muestra igual. */
+  tasaReferencia?: TasaReferencia;
   puerto: PuertoOpenPayments;
   config: Pick<
     ConfigOpenPayments,
@@ -220,6 +224,7 @@ export function crearServicioOpenPayments({
   config,
   ahora = Date.now,
   secreto = secretoConfirmacion,
+  tasaReferencia = async () => null,
 }: DepsReal): ServicioPagos {
   let receptoraCache: { datos: DatosWallet; hasta: number } | undefined;
   let conciliacion: { en: number; trabajo: Promise<void> } | undefined;
@@ -419,6 +424,13 @@ export function crearServicioOpenPayments({
         pagador: pagador.nombre,
         debito: cotizacion.debito,
         recibe: cotizacion.recibe,
+        tasaReferencia:
+          cotizacion.debito.codigo === cotizacion.recibe.codigo
+            ? null
+            : await tasaReferencia(
+                cotizacion.debito.codigo,
+                cotizacion.recibe.codigo,
+              ),
         venceEn: cotizacion.venceEn,
       };
     },

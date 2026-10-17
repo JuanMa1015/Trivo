@@ -8,6 +8,7 @@ import { LangToggle } from "@/components/lang-toggle";
 import { Sello } from "@/components/sello";
 import {
   formatearCuentaRegresiva,
+  costoConversion,
   segundosRestantes,
   tasaImplicita,
   type CotizacionPublica,
@@ -242,6 +243,9 @@ export function PagoScreen({ token }: { token: string }) {
   }
 
   const tasa = precio ? tasaImplicita(precio.debito, precio.recibe) : null;
+  const costo = precio
+    ? costoConversion(precio.debito, precio.recibe, precio.tasaReferencia)
+    : null;
 
   return (
     <main className={contenedor}>
@@ -300,6 +304,30 @@ export function PagoScreen({ token }: { token: string }) {
                   </dd>
                 </div>
               ) : null}
+              {tasa && precio.tasaReferencia ? (
+                <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
+                  <dt>{t.tasaReferencia}</dt>
+                  <dd>
+                    1 {precio.debito.codigo} ={" "}
+                    {new Intl.NumberFormat(locale, {
+                      maximumFractionDigits: 0,
+                    }).format(precio.tasaReferencia)}{" "}
+                    {precio.recibe.codigo}
+                  </dd>
+                </div>
+              ) : null}
+              {costo ? (
+                <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
+                  <dt>{t.costoConversion}</dt>
+                  <dd className="font-bold text-secondary">
+                    ≈ {formatearMonto(costo.monto, locale)} (
+                    {new Intl.NumberFormat(locale, {
+                      maximumFractionDigits: 1,
+                    }).format(costo.porcentaje)}
+                    %)
+                  </dd>
+                </div>
+              ) : null}
               {precio.pagador ? (
                 <div className="flex items-baseline justify-between gap-3 text-sm text-secondary/70">
                   <dt>{t.desde}</dt>
@@ -320,6 +348,27 @@ export function PagoScreen({ token }: { token: string }) {
           ) : null}
         </dl>
       </article>
+
+      {precio ? (
+        <p className="text-sm text-secondary/70">
+          {t.sinComision}
+          {precio.tasaReferencia ? (
+            <>
+              {" "}
+              {t.fuenteTasa}{" "}
+              <a
+                href="https://www.exchangerate-api.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                ExchangeRate-API
+              </a>
+              .
+            </>
+          ) : null}
+        </p>
+      ) : null}
 
       {precio ? null : (
         <label className="flex flex-col gap-2">

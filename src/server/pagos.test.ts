@@ -117,7 +117,7 @@ function crearPuertoFalso(ahora: () => number) {
   return { puerto, control };
 }
 
-function montarReal() {
+function montarReal(tasaReferencia?: () => Promise<number | null>) {
   let t = T0;
   const ahora = () => t;
   const repo = crearRepoMemoria(ahora, {
@@ -133,6 +133,7 @@ function montarReal() {
     config,
     ahora,
     secreto: () => SECRETO,
+    tasaReferencia,
   });
   return {
     servicio,
@@ -639,3 +640,19 @@ async function nonceDelIntento(
     throw new Error("el intento no tiene continuación guardada");
   return intento.continuacion.nonceCliente;
 }
+
+describe("servicio Open Payments: transparencia del precio", () => {
+  it("la cotización trae la tasa de mercado cuando hay conversión", async () => {
+    const m = montarReal(async () => 3_200);
+    const cobro = await m.servicio.crearCobro(50_000, "");
+    const cotizacion = await m.servicio.cotizar(cobro.token, PAGADOR);
+    expect(cotizacion.tasaReferencia).toBe(3_200);
+  });
+
+  it("sin fuente de tasas la cotización sigue funcionando, sin referencia", async () => {
+    const m = montarReal();
+    const cobro = await m.servicio.crearCobro(50_000, "");
+    const cotizacion = await m.servicio.cotizar(cobro.token, PAGADOR);
+    expect(cotizacion.tasaReferencia).toBeNull();
+  });
+});
