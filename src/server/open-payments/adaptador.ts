@@ -56,13 +56,17 @@ export function crearPuertoOpenPayments(
   let autenticado: Promise<AuthenticatedClient> | undefined;
   let publico: Promise<UnauthenticatedClient> | undefined;
 
+  // La testnet a veces tarda más que los 5 s por defecto del SDK.
+  const requestTimeoutMs = 20_000;
   const cliente = () =>
     (autenticado ??= createAuthenticatedClient({
+      requestTimeoutMs,
       walletAddressUrl: config.clienteWalletUrl,
       privateKey: config.privateKeyPath,
       keyId: config.keyId,
     }));
-  const clientePublico = () => (publico ??= createUnauthenticatedClient({}));
+  const clientePublico = () =>
+    (publico ??= createUnauthenticatedClient({ requestTimeoutMs }));
 
   /** Un grant no interactivo: si la wallet pide interacción, no es lo que esperamos. */
   async function tokenSinInteraccion(
@@ -241,7 +245,21 @@ export function crearPuertoOpenPayments(
           },
           { walletAddress: pagador.url, quoteId: cotizacion.quoteUrl },
         );
-        return { outgoingPaymentUrl: outgoing.id };
+        return {
+          outgoingPaymentUrl: outgoing.id,
+          accessToken: grant.access_token.value,
+        };
+      }),
+
+    consultarPagoSaliente: ({ outgoingPaymentUrl, accessToken }) =>
+      conSdk("consultar pago saliente", async () => {
+        const pago = await (
+          await cliente()
+        ).outgoingPayment.get({
+          url: validarUrlServidor(outgoingPaymentUrl),
+          accessToken,
+        });
+        return { fallido: pago.failed };
       }),
 
     consultarRecibido: ({ incomingPaymentUrl, esperado }) =>

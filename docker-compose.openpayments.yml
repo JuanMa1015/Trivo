@@ -17,7 +17,8 @@ services:
       COBROS_STORE: postgres
       # La base del contenedor, no la de Supabase que pueda estar en .env.
       DATABASE_URL: postgresql://trivo:trivo@db:5432/trivo
-      APP_BASE_URL: http://localhost:9028
+      # Para probar con otra persona: URL pública del túnel (ver docs/OPEN-PAYMENTS.md).
+      APP_BASE_URL: ${APP_BASE_URL_PUBLICA:-http://localhost:9028}
       OPEN_PAYMENTS_PRIVATE_KEY_PATH: /run/secrets/open_payments.key
     volumes:
       # La llave entra de solo lectura. Si ./private.key no existe, falla en vez de

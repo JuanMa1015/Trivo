@@ -64,7 +64,13 @@ export type PuertoOpenPayments = {
     continueUri: string;
     continueToken: string;
     interactRef: string;
-  }): Promise<{ outgoingPaymentUrl: string }>;
+  }): Promise<{ outgoingPaymentUrl: string; accessToken: string }>;
+
+  /** ¿La wallet del pagador marcó su pago saliente como fallido? */
+  consultarPagoSaliente(args: {
+    outgoingPaymentUrl: string;
+    accessToken: string;
+  }): Promise<{ fallido: boolean }>;
 
   /** Paso 8: ¿ya llegó todo el dinero al incoming payment? */
   consultarRecibido(args: {

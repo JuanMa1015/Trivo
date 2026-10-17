@@ -74,9 +74,10 @@ export function validarUrlServidor(url: string): string {
 
 /**
  * Hash que el servidor de autorización añade al retorno (GNAP):
- * base64url(sha256(nonceCliente \n nonceAs \n interact_ref \n URL del grant)).
+ * base64(sha256(nonceCliente, nonceAs, interact_ref y URL del grant, uno por línea)).
  * Comprueba que el regreso del navegador es de la interacción que iniciamos.
- * Acepta la URL del grant con o sin barra final.
+ * Verificado contra la testnet: base64 estándar con relleno `=` (no base64url) y la URL
+ * completa del servidor de autorización, que es la que muestra la wallet.
  */
 export function verificarHashInteraccion(args: {
   nonceCliente: string;
@@ -93,7 +94,7 @@ export function verificarHashInteraccion(args: {
         .update(
           `${args.nonceCliente}\n${args.nonceAs}\n${args.interactRef}\n${grantUrl}`,
         )
-        .digest("base64url"),
+        .digest("base64"),
     );
     return (
       esperado.length === recibido.length && timingSafeEqual(esperado, recibido)
