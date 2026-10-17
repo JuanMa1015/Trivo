@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useEffectEvent, type Ref } from "react";
-import { IconBorrarCampo, IconFlecha, IconWallet } from "@/components/icons";
+import { useEffect, useEffectEvent, useState, type Ref } from "react";
+import {
+  IconBorrarCampo,
+  IconClose,
+  IconFlecha,
+  IconWallet,
+} from "@/components/icons";
 import { pesosWeb } from "@/components/web/formato";
 import { CONCEPTOS, aplicarTecla } from "@/lib/talonario";
 
@@ -21,6 +26,12 @@ const TECLAS = [
 ];
 
 const miles = new Intl.NumberFormat("es-CO");
+
+/** "Otro" deja escribir el concepto; los demás son fijos. */
+const OTRO = "Otro";
+const FIJOS: readonly string[] = CONCEPTOS.filter((c) => c !== OTRO);
+/** El servidor acepta conceptos de hasta 30 caracteres. */
+const MAX_CONCEPTO = 30;
 
 /** Teclado ⌫ dibujado (la tecla se anuncia como "Borrar último dígito"). */
 function GlifoBorrar() {
@@ -83,6 +94,31 @@ export function PanelCobrarWeb({
     e.preventDefault();
   });
 
+  // Con "Otro" la fila de conceptos se vuelve un campo para escribirlo.
+  const [escribiendo, setEscribiendo] = useState(false);
+  // Al cobrar, la pantalla limpia el concepto: vuelve la fila de conceptos.
+  const [conceptoPrevio, setConceptoPrevio] = useState(concepto);
+  if (concepto !== conceptoPrevio) {
+    setConceptoPrevio(concepto);
+    if (concepto === "") setEscribiendo(false);
+  }
+  const otroActivo =
+    escribiendo || (concepto !== "" && !FIJOS.includes(concepto));
+
+  function elegir(c: string) {
+    if (c === OTRO) {
+      setEscribiendo(true);
+      onConcepto?.(OTRO);
+      return;
+    }
+    onConcepto?.(concepto === c ? "" : c);
+  }
+
+  function cerrarOtro() {
+    setEscribiendo(false);
+    onConcepto?.("");
+  }
+
   useEffect(() => {
     if (inactivo) return;
     const escuchar = (e: KeyboardEvent) => alTeclear(e);
@@ -139,26 +175,57 @@ export function PanelCobrarWeb({
         ) : null}
       </label>
 
-      <div className="flex gap-2" role="group" aria-label="Concepto (opcional)">
-        {CONCEPTOS.map((c) => (
+      {otroActivo ? (
+        <label className="campo-web web-aparecer h-9 rounded-full pr-1.5 text-web-sm">
+          <span className="font-semibold text-primary">{OTRO}</span>
+          <input
+            autoFocus
+            value={concepto === OTRO ? "" : concepto}
+            onChange={(e) => {
+              const texto = e.target.value.slice(0, MAX_CONCEPTO);
+              onConcepto?.(texto.trim() === "" ? OTRO : texto);
+            }}
+            maxLength={MAX_CONCEPTO}
+            placeholder="Escribe el concepto"
+            aria-label="Concepto"
+            className="text-web-sm font-semibold placeholder:font-normal placeholder:text-ink/40"
+          />
           <button
-            key={c}
             type="button"
-            aria-pressed={concepto === c}
-            onClick={() => onConcepto?.(concepto === c ? "" : c)}
-            className={`chip-web flex-1 ${
-              concepto === c
-                ? "bg-primary text-white"
-                : "bg-aqua/15 text-tinta hover:bg-aqua/30"
-            }`}
+            onClick={cerrarOtro}
+            aria-label="Volver a los conceptos"
+            className="grid size-7 place-items-center rounded-full text-ink/50 transition-colors hover:bg-aqua/20 hover:text-tinta"
           >
-            {c}
+            <IconClose width={16} height={16} />
           </button>
-        ))}
-      </div>
+        </label>
+      ) : (
+        <div
+          className="flex gap-2"
+          role="group"
+          aria-label="Concepto (opcional)"
+        >
+          {CONCEPTOS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={concepto === c}
+              onClick={() => elegir(c)}
+              className={`chip-web flex-1 ${
+                concepto === c
+                  ? "bg-primary text-white"
+                  : "bg-aqua/15 text-tinta hover:bg-aqua/30"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
 
+      {/* El teclado ocupa todo el alto libre: las teclas crecen con la pantalla. */}
       <div
-        className="grid grid-cols-3 gap-2"
+        className="grid min-h-0 flex-1 grid-cols-3 grid-rows-4 gap-2"
         role="group"
         aria-label="Teclado de monto"
       >
@@ -179,7 +246,7 @@ export function PanelCobrarWeb({
         type="button"
         onClick={onCobrar}
         disabled={monto <= 0 || creando}
-        className="boton-web mt-auto px-6"
+        className="boton-web px-6"
       >
         <IconWallet width={22} height={22} />
         <span className="flex-1 text-left">

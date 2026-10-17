@@ -14,6 +14,7 @@ import {
 import { EstadoChipWeb } from "@/components/web/estado-chip";
 import { pesosWeb } from "@/components/web/formato";
 import { HeroWeb } from "@/components/web/hero-web";
+import { Icono3D } from "@/components/web/icono-3d";
 import { NavComercio } from "@/components/web/nav-web";
 import { TarjetaCobroWeb } from "@/components/web/tarjeta-cobro";
 import type { CobroResumen } from "@/lib/cobros";
@@ -137,9 +138,7 @@ export function TalonarioWebScreen() {
             </div>
             {listo && cobros.length === 0 ? (
               <div className="web-escalonado flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-                <span className="hero-mini grid size-20 place-items-center rounded-3xl text-primary">
-                  <IconDocumento width={36} height={36} />
-                </span>
+                <Icono3D Icono={IconDocumento} tono="cielo" tamano={80} />
                 <p className="max-w-xs text-web-sm text-ink/60">
                   Tu primer comprobante aparece aquí cuando cobres.
                 </p>

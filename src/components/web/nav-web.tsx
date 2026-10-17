@@ -9,6 +9,7 @@ import {
   IconWallet,
 } from "@/components/icons";
 import { LangToggle } from "@/components/lang-toggle";
+import { Icono3D } from "@/components/web/icono-3d";
 import { LogoTrivo } from "@/components/web/marca";
 import type { Lang } from "@/lib/i18n";
 import { usePerfil } from "@/lib/use-perfil";
@@ -49,7 +50,7 @@ function iniciales(nombre: string): string {
 
 function Barra({ children }: { children: ReactNode }) {
   return (
-    <header className="nav-web flex h-16 items-center gap-6 px-6">
+    <header className="nav-web flex h-16 items-center gap-3 px-6 xl:gap-6">
       {children}
     </header>
   );
@@ -64,7 +65,7 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
         <LogoTrivo />
         {usuario ? (
           <span
-            className="max-w-40 truncate border-l border-ink/15 pl-4 text-web-sm font-semibold text-tinta"
+            className="max-w-28 truncate border-l xl:max-w-40 border-ink/15 pl-4 text-web-sm font-semibold text-tinta"
             title={usuario}
           >
             {usuario}
@@ -80,13 +81,17 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
                 <Link
                   href={href}
                   aria-current={activa ? "page" : undefined}
-                  className={`flex h-11 items-center gap-2 rounded-full px-5 text-web-sm transition-colors duration-200 ${
+                  className={`flex h-11 items-center gap-2 rounded-full text-web-sm transition-colors duration-200 ${
                     activa
-                      ? "bg-aqua/30 font-bold text-primary"
-                      : "text-ink/60 hover:bg-aqua/10 hover:text-tinta"
+                      ? "bg-aqua/30 pl-1.5 pr-5 font-bold text-primary"
+                      : "px-5 text-ink/60 hover:bg-aqua/10 hover:text-tinta"
                   }`}
                 >
-                  <Icono width={20} height={20} />
+                  {activa ? (
+                    <Icono3D Icono={Icono} tamano={30} />
+                  ) : (
+                    <Icono width={20} height={20} className="hidden xl:block" />
+                  )}
                   {texto}
                 </Link>
               </li>
@@ -94,10 +99,15 @@ export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
           })}
         </ul>
       </nav>
-      <div className="flex items-center gap-3">
-        <span className="text-web-sm font-semibold text-tinta">{comercio}</span>
+      <div className="flex min-w-0 items-center gap-3">
         <span
-          className="grid size-10 place-items-center rounded-full bg-primary text-web-xs font-bold text-white"
+          className="max-w-44 truncate text-web-sm font-semibold text-tinta xl:max-w-72"
+          title={comercio}
+        >
+          {comercio}
+        </span>
+        <span
+          className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-web-xs font-bold text-white"
           aria-hidden="true"
         >
           {iniciales(comercio)}
