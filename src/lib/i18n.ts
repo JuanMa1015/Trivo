@@ -36,7 +36,7 @@ export const textos = {
     fallidoAyuda:
       "Revisa que tengas saldo suficiente en tu wallet. No se cobró este pago: pídele al vendedor que cree un cobro nuevo e inténtalo de nuevo. Si ves el cargo en tu wallet, no repitas el pago y avísale.",
     exito: "Pago enviado",
-    exitoAyuda: "El vendedor ya recibió su recibo.",
+    exitoAyuda: "El vendedor ya recibió su comprobante.",
     confirmaNombre:
       "Confirma que este es el nombre de quien te cobra, antes de aprobar.",
     codigoConfirmacion: "Código de confirmación",
