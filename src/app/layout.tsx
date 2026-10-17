@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { RecordatorioRegistro } from "@/components/recordatorio-registro";
 import "./globals.css";
 
 // Fuente del diseño de escritorio. Se aloja con la app (el navegador no llama a
@@ -19,7 +21,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${jakarta.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Suspense fallback={null}>
+          <RecordatorioRegistro />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

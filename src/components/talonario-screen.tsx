@@ -1,5 +1,7 @@
 "use client";
 
+import { EncabezadoMovil } from "@/components/encabezado-movil";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Keypad } from "@/components/keypad";
@@ -7,7 +9,7 @@ import { TalonarioLista } from "@/components/talonario-lista";
 import { EscritorioCobrar } from "@/components/web/escritorio-cobrar";
 import type { Cobro, CobroResumen } from "@/lib/cobros";
 import { formatearPesos } from "@/lib/format";
-import { COMERCIO_EJEMPLO, CONCEPTOS, aplicarTecla } from "@/lib/talonario";
+import { CONCEPTOS, aplicarTecla } from "@/lib/talonario";
 import { usePolling } from "@/lib/use-polling";
 import { SoloMovil } from "@/components/web/vista";
 
@@ -37,6 +39,13 @@ export function TalonarioScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ monto, concepto }),
       });
+      if (r.status === 403) {
+        const cuerpo = await r.json().catch(() => null);
+        if (cuerpo?.error === "registro_requerido") {
+          router.push("/registro?obligatorio=1");
+          return;
+        }
+      }
       if (!r.ok) throw new Error(String(r.status));
       const { cobro } = (await r.json()) as { cobro: Cobro };
       // La pantalla se conserva en caché al navegar: déjala lista para el próximo cobro.
@@ -54,14 +63,11 @@ export function TalonarioScreen() {
     <>
       <SoloMovil>
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-10 pt-4 lg:hidden">
-          <header className="flex items-center justify-between">
-            <span className="text-xl font-bold tracking-tight text-primary">
-              Trivo
-            </span>
-            <span className="text-sm text-secondary/70">
-              {COMERCIO_EJEMPLO}
-            </span>
-          </header>
+          <EncabezadoMovil>
+            <Link href="/impuestos" className="font-bold text-primary">
+              Impuestos
+            </Link>
+          </EncabezadoMovil>
 
           <div className="pila">
             <div className="pila-hoja" aria-hidden="true" />

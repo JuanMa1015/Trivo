@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { IconEscudo } from "@/components/icons";
@@ -95,6 +96,12 @@ export function AccesoForm() {
             >
               {entrando ? "Entrando…" : "Entrar"}
             </button>
+            <p className="text-center text-sm text-secondary/70">
+              ¿Primera vez?{" "}
+              <Link href="/registro" className="font-bold text-primary">
+                Crea tu cuenta
+              </Link>
+            </p>
           </form>
         </main>
       </SoloMovil>
@@ -139,6 +146,12 @@ export function AccesoForm() {
             >
               {entrando ? "Entrando…" : "Entrar"}
             </button>
+            <p className="text-center text-web-xs text-ink/60">
+              ¿Primera vez?{" "}
+              <Link href="/registro" className="font-bold text-primary">
+                Crea tu cuenta
+              </Link>
+            </p>
           </div>
         </form>
       </PantallaWeb>

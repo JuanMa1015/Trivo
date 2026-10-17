@@ -162,9 +162,9 @@ export function CobroScreen({ id }: { id: string }) {
                 ) : null}
               </div>
 
-              {pagador && !cobrado ? (
+              {pagador ? (
                 <p className="mt-3 text-sm text-secondary/70">
-                  Quien paga:{" "}
+                  {cobrado ? "Pagó:" : "Quien paga:"}{" "}
                   <strong className="break-all text-secondary">
                     {pagador}
                   </strong>
@@ -186,7 +186,7 @@ export function CobroScreen({ id }: { id: string }) {
                   <div className="flex items-center gap-4">
                     <Sello texto="Cobrado" />
                     <p className="text-sm text-secondary/70">
-                      Se sumó a tu historial. Factura generada (demo).
+                      Se sumó a tu historial. Descarga tu comprobante abajo.
                     </p>
                   </div>
                   {cobro.confirmacion ? (
@@ -240,6 +240,25 @@ export function CobroScreen({ id }: { id: string }) {
                   Simular que ya pagó (demo)
                 </button>
               ) : null}
+            </div>
+          ) : null}
+
+          {cobrado ? (
+            <div className="flex flex-col gap-3">
+              <a
+                href={`/api/cobros/${cobro.id}/comprobante?formato=a4`}
+                download
+                className="flex h-12 items-center justify-center rounded-2xl border border-secondary/25 text-base font-bold text-secondary"
+              >
+                Descargar comprobante (PDF)
+              </a>
+              <a
+                href={`/api/cobros/${cobro.id}/comprobante?formato=pos`}
+                download
+                className="flex h-12 items-center justify-center rounded-2xl border border-secondary/25 text-base font-bold text-secondary"
+              >
+                Ticket para impresora POS
+              </a>
             </div>
           ) : null}
 

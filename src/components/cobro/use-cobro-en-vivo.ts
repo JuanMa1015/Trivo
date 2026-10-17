@@ -62,12 +62,7 @@ export function mensajeDeCobro(cobro: Cobro): string {
   return `${cobro.comercio} te cobra ${formatearPesos(cobro.monto)}. Entra a ${origen}/pagar y escribe el código ${codigoAgrupado(cobro.codigo)}, o abre ${enlaceDePago(cobro)}`;
 }
 
-/** Quién paga, según la wallet que declaró al pedir precio o aprobar. */
-export function pagadorDe(cobro: Cobro): string | undefined {
-  return cobro.eventos.findLast(
-    (e) => e.tipo === "cotizado" || e.tipo === "consentimiento_iniciado",
-  )?.detalle;
-}
+export { pagadorDe } from "@/lib/cobros";
 
 /**
  * @param alTerminarSimulacion Qué hacer cuando el pago simulado termina de cargar
