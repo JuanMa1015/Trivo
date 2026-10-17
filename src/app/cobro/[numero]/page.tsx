@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { CobroCargando } from "@/components/web/cargando";
 import { CobroScreen } from "@/components/cobro-screen";
 
 async function Cobro({ params }: Pick<PageProps<"/cobro/[numero]">, "params">) {
@@ -10,7 +11,7 @@ async function Cobro({ params }: Pick<PageProps<"/cobro/[numero]">, "params">) {
 
 export default function CobroPage({ params }: PageProps<"/cobro/[numero]">) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<CobroCargando />}>
       <Cobro params={params} />
     </Suspense>
   );
