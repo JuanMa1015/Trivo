@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aprobarSchema,
+  costoConversion,
   cotizarSchema,
   crearCobroSchema,
   estaVencido,
@@ -93,5 +94,30 @@ describe("importes de Open Payments", () => {
   it("calcula la tasa solo si las monedas son distintas", () => {
     expect(tasaImplicita(usd, cop)).toBeCloseTo(3176.62, 1);
     expect(tasaImplicita(cop, cop)).toBeNull();
+  });
+});
+
+describe("costoConversion", () => {
+  const debito = { valor: "1000", codigo: "EUR", escala: 2 };
+  const recibe = {
+    valor: "3_000_000".replace(/_/g, ""),
+    codigo: "COP",
+    escala: 2,
+  };
+
+  it("es lo que se paga de más frente a la tasa de mercado", () => {
+    // A 3.200 COP/EUR, 30.000 COP valen 9,375 EUR; pagar 10 EUR es 0,625 de más.
+    const c = costoConversion(debito, recibe, 3_200);
+    expect(c?.monto).toEqual({ valor: "63", codigo: "EUR", escala: 2 });
+    expect(c?.porcentaje).toBeCloseTo(6.25, 2);
+  });
+
+  it("no hay costo sin referencia, sin conversión o si la wallet da mejor tasa", () => {
+    expect(costoConversion(debito, recibe, null)).toBeNull();
+    expect(
+      costoConversion(debito, { ...recibe, codigo: "EUR" }, 3_200),
+    ).toBeNull();
+    expect(costoConversion(debito, recibe, 3_000)).toBeNull();
+    expect(costoConversion(debito, recibe, 2_900)).toBeNull();
   });
 });

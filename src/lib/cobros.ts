@@ -105,8 +105,34 @@ export type CotizacionPublica = {
   pagador: string | null;
   debito: Monto;
   recibe: Monto;
+  /** Unidades de la moneda del cobro por cada unidad que paga el pagador, a precio de mercado. */
+  tasaReferencia: number | null;
   venceEn: string;
 };
+
+/**
+ * Cuánto de lo que paga el pagador es costo de la conversión de su wallet: lo que
+ * paga de más frente a pagar la misma cantidad a la tasa de referencia.
+ */
+export function costoConversion(
+  debito: Monto,
+  recibe: Monto,
+  tasaReferencia: number | null,
+): { monto: Monto; porcentaje: number } | null {
+  if (!tasaReferencia || debito.codigo === recibe.codigo) return null;
+  const justo = montoANumero(recibe) / tasaReferencia;
+  const pagado = montoANumero(debito);
+  const extra = pagado - justo;
+  if (extra <= 0 || pagado <= 0) return null;
+  return {
+    monto: {
+      valor: String(Math.round(extra * 10 ** debito.escala)),
+      codigo: debito.codigo,
+      escala: debito.escala,
+    },
+    porcentaje: (extra / pagado) * 100,
+  };
+}
 
 export const VENCE_EN_MS = 10 * 60 * 1000;
 export const PROCESO_DEMO_MS = 5_000;

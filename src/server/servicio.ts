@@ -12,6 +12,7 @@ import {
   type ServicioPagos,
 } from "./pagos";
 import { obtenerPrisma } from "./prisma";
+import { crearTasaReferencia } from "./tasas";
 
 const global = globalThis as unknown as { __trivoServicio?: ServicioPagos };
 
@@ -44,5 +45,6 @@ export function obtenerServicio(): ServicioPagos {
     intentos,
     puerto: crearPuertoOpenPayments(config),
     config,
+    tasaReferencia: crearTasaReferencia(),
   }));
 }
