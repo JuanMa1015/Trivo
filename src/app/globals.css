@@ -182,3 +182,687 @@ body {
   width: 4%;
   animation: progreso 5s linear forwards;
 }
+
+/* ===========================================================================
+ * ESCRITORIO (desde lg, 1024 px)
+ * Todo lo de abajo solo aplica a las composiciones de escritorio
+ * (src/components/web y las ramas de escritorio de cada pantalla). El móvil,
+ * arriba, no cambia.
+ * ========================================================================= */
+
+@theme {
+  --color-ink: #1f1f1f;
+  --color-aqua: #80ced7;
+  --color-error: #b42318;
+  /* Títulos: tinta con un toque del primario (de la misma paleta). */
+  --color-tinta: color-mix(in srgb, #007ea7 22%, #1f1f1f);
+  --color-papel: #fbfdfd;
+  --color-fondo: #edf4f6;
+  --font-web:
+    var(--font-jakarta), "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Escala tipográfica de escritorio. */
+  --text-web-xs: 14px;
+  --text-web-xs--line-height: 1.45;
+  --text-web-sm: 16px;
+  --text-web-sm--line-height: 1.5;
+  --text-cuerpo: 18px;
+  --text-cuerpo--line-height: 1.45;
+  --text-medio: 22px;
+  --text-medio--line-height: 1.3;
+  --text-titulo: 40px;
+  --text-titulo--line-height: 1.1;
+  --text-grande: 48px;
+  --text-grande--line-height: 1.1;
+
+  --radius-web: 28px;
+  --radius-tecla: 16px;
+  --shadow-tarjeta: 0 18px 40px -28px rgb(0 76 101 / 0.35);
+  --shadow-suave: 0 8px 20px -14px rgb(0 76 101 / 0.35);
+
+  --ease-salida: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-suave: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/*
+ * Medidas que se compactan en ventanas bajas (laptops de 768 px de alto) para que
+ * Cobrar, el cobro, el Talonario y el Resumen quepan sin scroll.
+ */
+:root {
+  --dur-rapida: 160ms;
+  --dur-media: 320ms;
+  --dur-lenta: 480ms;
+  --hero-alto: 200px;
+  --separacion: 24px;
+  --tecla-alto: 48px;
+  --qr: clamp(200px, calc(100dvh - 640px), 260px);
+}
+
+@media (max-height: 860px) {
+  :root {
+    --hero-alto: 156px;
+    --separacion: 16px;
+    --tecla-alto: 40px;
+  }
+}
+
+@media (width >= 64rem) {
+  body {
+    background: var(--color-fondo);
+    font-family: var(--font-web);
+    color: var(--color-ink);
+  }
+}
+
+/* ------------------------------------------------------------- Superficies */
+
+/* Barra superior: blanca, redondeada, con la marca, las secciones e identidad. */
+.nav-web {
+  view-transition-name: nav-web;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--shadow-tarjeta);
+}
+
+/* Hero: degradado de agua con marcas "T" de fondo. Mismo en todas las secciones. */
+.hero-web {
+  view-transition-name: hero-web;
+  position: relative;
+  height: var(--hero-alto);
+  overflow: hidden;
+  border-radius: var(--radius-web);
+  background:
+    radial-gradient(
+      60% 140% at 88% 0%,
+      rgb(255 255 255 / 0.55),
+      transparent 60%
+    ),
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--color-aqua) 28%, #fff) 0%,
+      color-mix(in srgb, var(--color-aqua) 55%, #fff) 55%,
+      color-mix(in srgb, var(--color-aqua) 80%, var(--color-primary)) 100%
+    );
+}
+
+.hero-titulo {
+  view-transition-name: hero-titulo;
+}
+
+.hero-subtitulo {
+  view-transition-name: hero-subtitulo;
+}
+
+.hero-insignia {
+  view-transition-name: hero-insignia;
+}
+
+.hero-tarjeta {
+  view-transition-name: hero-tarjeta;
+}
+
+/* Tarjeta de cristal del hero: monto principal. */
+.cristal-web {
+  border-radius: 22px;
+  background: rgb(255 255 255 / 0.82);
+  box-shadow: var(--shadow-tarjeta);
+}
+
+/* Tarjeta destacada: mismo degradado de agua del hero, en pequeño. */
+.hero-mini {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-aqua) 40%, #fff),
+    color-mix(in srgb, var(--color-aqua) 85%, #fff)
+  );
+}
+
+/* Tarjeta de contenido. */
+.tarjeta-web {
+  border-radius: var(--radius-web);
+  background: var(--color-papel);
+  box-shadow: var(--shadow-tarjeta);
+}
+
+/* Ícono en baldosa (encabezados y ventajas). */
+.baldosa-web {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-aqua) 28%, #fff);
+  color: var(--color-primary);
+}
+
+/* Perforación de talonario: línea punteada con muescas del color del fondo. */
+.perforacion-web {
+  position: relative;
+  height: 0;
+  border-top: 2px dashed rgb(31 31 31 / 0.12);
+}
+
+.perforacion-web::before,
+.perforacion-web::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-fondo);
+}
+
+.perforacion-web::before {
+  left: -36px;
+}
+
+.perforacion-web::after {
+  right: -36px;
+}
+
+/* Talones de la lista: cada fila separada por perforación con muescas. */
+.talon-web {
+  position: relative;
+}
+
+.talon-web + .talon-web {
+  border-top: 2px dashed rgb(31 31 31 / 0.08);
+}
+
+.talon-web + .talon-web::before,
+.talon-web + .talon-web::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-fondo);
+}
+
+.talon-web + .talon-web::before {
+  left: -12px;
+}
+
+.talon-web + .talon-web::after {
+  right: -12px;
+}
+
+/* Visor del QR: esquinas en primario, como el visor de una cámara. */
+.visor-qr {
+  position: relative;
+  display: grid;
+  width: calc(var(--qr) + 40px);
+  height: calc(var(--qr) + 40px);
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--color-aqua) 10%, #fff);
+  transition:
+    opacity var(--dur-media) var(--ease-suave),
+    filter var(--dur-media) var(--ease-suave);
+}
+
+.visor-qr::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--color-primary);
+  border-radius: 24px;
+  mask: conic-gradient(at 40px 40px, #0000 75%, #000 0) 0 0 / calc(100% - 40px)
+    calc(100% - 40px);
+}
+
+.visor-qr img,
+.visor-qr > .qr-hueco {
+  width: var(--qr);
+  height: var(--qr);
+  border-radius: 16px;
+}
+
+.visor-qr[data-atenuado="true"] {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+/* ------------------------------------------------------------------ Controles */
+
+.boton-web {
+  display: flex;
+  height: 52px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-radius: 18px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-primary) 70%, var(--color-aqua)) 0%,
+    var(--color-primary) 55%,
+    color-mix(in srgb, var(--color-primary) 85%, #000) 100%
+  );
+  color: #fff;
+  font-size: var(--text-cuerpo);
+  font-weight: 700;
+  box-shadow: 0 14px 28px -16px rgb(0 126 167 / 0.7);
+  transition:
+    transform 120ms var(--ease-salida),
+    box-shadow 240ms var(--ease-suave),
+    filter 240ms var(--ease-suave);
+}
+
+.boton-web:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 18px 32px -16px rgb(0 126 167 / 0.8);
+}
+
+.boton-web:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.boton-web:disabled,
+.boton-web[aria-disabled="true"] {
+  background: rgb(31 31 31 / 0.07);
+  color: rgb(31 31 31 / 0.38);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.boton-web-borde {
+  display: flex;
+  height: 52px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 18px;
+  border: 1px solid rgb(31 31 31 / 0.14);
+  background: #fff;
+  color: var(--color-tinta);
+  font-size: var(--text-web-sm);
+  font-weight: 700;
+  transition:
+    transform 120ms var(--ease-salida),
+    background-color 240ms var(--ease-suave);
+}
+
+.boton-web-borde:hover {
+  background: color-mix(in srgb, var(--color-aqua) 14%, #fff);
+}
+
+.boton-web-borde:active {
+  transform: scale(0.98);
+}
+
+/* Botón circular de 44 px para acciones con ícono (copiar, cerrar, editar). */
+.boton-circular {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-aqua) 18%, #fff);
+  color: var(--color-tinta);
+  transition:
+    transform 120ms var(--ease-salida),
+    background-color 240ms var(--ease-suave);
+}
+
+.boton-circular:hover {
+  background: color-mix(in srgb, var(--color-aqua) 35%, #fff);
+}
+
+.boton-circular:active {
+  transform: scale(0.94);
+}
+
+.tecla-web {
+  display: flex;
+  height: var(--tecla-alto);
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-tecla);
+  background: color-mix(in srgb, var(--color-aqua) 9%, #f3f6f7);
+  color: var(--color-tinta);
+  font-size: var(--text-cuerpo);
+  font-weight: 700;
+  transition:
+    transform 120ms var(--ease-salida),
+    background-color 240ms var(--ease-suave);
+}
+
+.tecla-web:hover {
+  background: color-mix(in srgb, var(--color-aqua) 20%, #fff);
+}
+
+.tecla-web:active {
+  transform: scale(0.96);
+  background: color-mix(in srgb, var(--color-aqua) 40%, #fff);
+}
+
+.chip-web {
+  display: inline-flex;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 0 14px;
+  font-size: var(--text-web-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color 240ms var(--ease-suave),
+    color 240ms var(--ease-suave),
+    transform 120ms var(--ease-salida);
+}
+
+button.chip-web:active {
+  transform: scale(0.96);
+}
+
+/* Campo: fondo claro, borde sutil y foco en primario. */
+.campo-web {
+  display: flex;
+  height: 52px;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border-radius: 18px;
+  border: 1px solid rgb(31 31 31 / 0.08);
+  background: #fff;
+  padding: 0 18px;
+  color: var(--color-tinta);
+  font-size: var(--text-cuerpo);
+  transition:
+    border-color 240ms var(--ease-suave),
+    box-shadow 240ms var(--ease-suave);
+}
+
+.campo-web:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgb(0 126 167 / 0.12);
+}
+
+.campo-web input {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  outline: none;
+}
+
+.campo-web[aria-invalid="true"],
+.campo-web:has(input[aria-invalid="true"]) {
+  border-color: var(--color-error);
+}
+
+/* Cifra que se achica solo si no cabe en su tarjeta. */
+.contenedor-cifra {
+  container-type: inline-size;
+}
+
+.cifra-web {
+  font-size: min(var(--text-titulo), 15cqi);
+  line-height: 1.1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Talonario: la lista se encoge y el detalle entra a la derecha. */
+.maestro-detalle {
+  display: grid;
+  grid-template-columns: 1fr 0fr;
+  column-gap: 0;
+  transition:
+    grid-template-columns var(--dur-media) var(--ease-suave),
+    column-gap var(--dur-media) var(--ease-suave);
+}
+
+.maestro-detalle[data-abierto="true"] {
+  grid-template-columns: 5fr 7fr;
+  column-gap: var(--separacion);
+}
+
+/* ---------------------------------------------------------------- Movimiento */
+
+@keyframes web-aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes web-desvanecer {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes web-subir {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes web-entrar-derecha {
+  from {
+    opacity: 0;
+    transform: translateX(32px) scale(0.98);
+  }
+}
+
+@keyframes web-salir-derecha {
+  to {
+    opacity: 0;
+    transform: translateX(32px) scale(0.98);
+  }
+}
+
+@keyframes web-paso {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes web-atenuar {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+@keyframes web-flotar {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--giro, 0deg));
+  }
+  50% {
+    transform: translateY(-6px) rotate(var(--giro, 0deg));
+  }
+}
+
+/* El sello es el único rebote: estampado con leve sobreimpulso. */
+@keyframes web-sellar {
+  0% {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.4);
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(-3.5deg) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-4deg) scale(1);
+  }
+}
+
+.web-escalonado > * {
+  animation: web-subir var(--dur-media) var(--ease-salida) both;
+}
+
+.web-escalonado > :nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.web-escalonado > :nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.web-escalonado > :nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.web-escalonado > :nth-child(n + 5) {
+  animation-delay: 160ms;
+}
+
+.web-aparecer {
+  animation: web-aparecer var(--dur-rapida) var(--ease-salida) both;
+}
+
+.web-subir {
+  animation: web-subir 240ms var(--ease-salida) both;
+}
+
+.web-detalle-entrar {
+  animation: web-entrar-derecha var(--dur-media) var(--ease-salida) 120ms both;
+}
+
+.web-detalle-salir {
+  animation: web-salir-derecha 240ms var(--ease-suave) both;
+}
+
+.web-paso {
+  animation: web-paso 240ms var(--ease-salida) both;
+}
+
+.web-atenuado {
+  animation: web-atenuar var(--dur-media) var(--ease-suave) both;
+}
+
+.web-sello svg {
+  animation: web-sellar 400ms var(--ease-salida) both;
+}
+
+/* Las marcas "T" del hero flotan muy despacio. */
+.marca-flotante {
+  animation: web-flotar 6s ease-in-out infinite;
+}
+
+/*
+ * View Transitions entre secciones. Los nombres van en CSS (no en <ViewTransition
+ * name>): las rutas que Next mantiene ocultas no participan, así no hay duplicados.
+ * Barra y hero quedan quietos; los textos del hero suben 8 px con crossfade y el
+ * contenido hace crossfade. La raíz no anima: el móvil sigue igual.
+ */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-group(nav-web),
+::view-transition-group(hero-web) {
+  animation: none;
+}
+
+::view-transition-old(nav-web),
+::view-transition-old(hero-web) {
+  display: none;
+}
+
+::view-transition-new(nav-web),
+::view-transition-new(hero-web) {
+  animation: none;
+}
+
+::view-transition-group(hero-titulo),
+::view-transition-group(hero-subtitulo),
+::view-transition-group(hero-insignia),
+::view-transition-group(hero-tarjeta) {
+  animation-duration: 240ms;
+  animation-timing-function: var(--ease-suave);
+}
+
+::view-transition-old(hero-titulo),
+::view-transition-old(hero-subtitulo),
+::view-transition-old(hero-insignia),
+::view-transition-old(hero-tarjeta),
+::view-transition-old(.contenido-web) {
+  animation: web-desvanecer var(--dur-rapida) var(--ease-suave) both;
+}
+
+::view-transition-new(hero-titulo),
+::view-transition-new(hero-subtitulo),
+::view-transition-new(hero-insignia),
+::view-transition-new(hero-tarjeta) {
+  animation: web-subir 240ms var(--ease-salida) both;
+}
+
+::view-transition-new(.contenido-web) {
+  animation: web-aparecer 240ms var(--ease-salida) both;
+}
+
+/* Movimiento reducido: solo opacidad, 120 ms. */
+@media (prefers-reduced-motion: reduce) {
+  .web-escalonado > *,
+  .web-aparecer,
+  .web-subir,
+  .web-detalle-entrar,
+  .web-paso,
+  .web-sello svg {
+    animation: web-aparecer 120ms linear both !important;
+    animation-delay: 0ms !important;
+  }
+
+  .web-detalle-salir {
+    animation: web-desvanecer 120ms linear both !important;
+  }
+
+  .web-atenuado {
+    animation: none;
+    opacity: 0.45;
+  }
+
+  .marca-flotante {
+    animation: none;
+  }
+
+  .maestro-detalle {
+    transition: none;
+  }
+
+  .tecla-web:active,
+  button.chip-web:active,
+  .boton-web:active,
+  .boton-web-borde:active,
+  .boton-circular:active {
+    transform: none;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 120ms !important;
+    animation-delay: 0ms !important;
+  }
+
+  ::view-transition-new(hero-titulo),
+  ::view-transition-new(hero-subtitulo),
+  ::view-transition-new(hero-insignia),
+  ::view-transition-new(hero-tarjeta) {
+    animation-name: web-aparecer !important;
+  }
+}
