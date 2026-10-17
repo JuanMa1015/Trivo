@@ -1,6 +1,5 @@
 "use client";
 
-import { EncabezadoMovil } from "@/components/encabezado-movil";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { IconDocumento, IconEscudo, IconReloj } from "@/components/icons";
 import {
@@ -12,7 +11,6 @@ import {
 import { pesosWeb } from "@/components/web/formato";
 import { HeroWeb } from "@/components/web/hero-web";
 import { NavComercio } from "@/components/web/nav-web";
-import { SoloMovil } from "@/components/web/vista";
 import {
   ANIO_GRAVABLE_A_DECLARAR,
   ANIO_GRAVABLE_EN_CURSO,
@@ -142,19 +140,6 @@ export function ImpuestosScreen() {
 
   return (
     <>
-      <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-10 pt-4 font-[family-name:var(--font-web)] lg:hidden">
-          <EncabezadoMovil />
-          {aviso}
-          <NoEximeBanner />
-          {avance}
-          {plazo}
-          {multa}
-          {consejos}
-          {pie}
-        </main>
-      </SoloMovil>
-
       <PantallaWeb
         nav={<NavComercio seccion="impuestos" />}
         hero={

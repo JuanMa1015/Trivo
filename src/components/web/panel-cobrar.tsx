@@ -128,7 +128,7 @@ export function PanelCobrarWeb({
 
   return (
     <section
-      className={`tarjeta-web flex flex-col gap-3 p-6 ${inactivo ? "web-atenuado" : ""}`}
+      className={`tarjeta-web flex flex-col gap-3 p-4 sm:p-6 ${inactivo ? "web-atenuado max-lg:hidden" : ""}`}
       inert={inactivo}
       aria-hidden={inactivo || undefined}
       aria-labelledby="titulo-monto"

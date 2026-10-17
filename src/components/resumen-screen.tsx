@@ -1,6 +1,5 @@
 "use client";
 
-import { EncabezadoMovil } from "@/components/encabezado-movil";
 import {
   useEffect,
   useState,
@@ -36,7 +35,6 @@ import type { CobroResumen } from "@/lib/cobros";
 import { hoyEnColombia, mesAnterior, nombreDelPeriodo } from "@/lib/impuestos";
 import { usePerfil } from "@/lib/use-perfil";
 import { useAhora, usePolling } from "@/lib/use-polling";
-import { SoloMovil } from "@/components/web/vista";
 
 const TIPS = [
   "Registra cada venta, aunque sea pequeña. Así descubres tu mejor día.",
@@ -75,17 +73,6 @@ export function ResumenScreen() {
 
   return (
     <>
-      <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-10 pt-4 font-[family-name:var(--font-web)] lg:hidden">
-          <EncabezadoMovil />
-          {aviso}
-          <Semana r={r} listo={listo} cifra={cifra} />
-          <Datos r={r} cifra={cifra} />
-          <Certificado ahora={ahora} />
-          <Tips />
-        </main>
-      </SoloMovil>
-
       <PantallaWeb
         nav={<NavComercio seccion="resumen" />}
         hero={

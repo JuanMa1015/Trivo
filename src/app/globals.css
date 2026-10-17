@@ -246,11 +246,22 @@ body {
   }
 }
 
-@media (width >= 64rem) {
-  body {
-    background: var(--color-fondo);
-    font-family: var(--font-web);
-    color: var(--color-ink);
+/* El diseño nuevo es el de todas las pantallas, también en el celular. */
+body {
+  background: var(--color-fondo);
+  font-family: var(--font-web);
+  color: var(--color-ink);
+  /* Las animaciones de entrada vienen de la derecha: que no abran un scroll horizontal. */
+  overflow-x: clip;
+}
+
+/* Celular y tableta: se desplaza con normalidad y las teclas son más grandes. */
+@media (width < 64rem) {
+  :root {
+    --separacion: 16px;
+    --tecla-alto: 56px;
+    --qr: min(58vw, 240px);
+    --hero-alto: 0px;
   }
 }
 
@@ -268,7 +279,7 @@ body {
 .hero-web {
   view-transition-name: hero-web;
   position: relative;
-  height: var(--hero-alto);
+  min-height: var(--hero-alto);
   overflow: hidden;
   border-radius: var(--radius-web);
   background:
@@ -299,6 +310,12 @@ body {
 
 .hero-tarjeta {
   view-transition-name: hero-tarjeta;
+}
+
+@media (width >= 64rem) {
+  .hero-web {
+    height: var(--hero-alto);
+  }
 }
 
 /* Tarjeta de cristal del hero: monto principal. */
@@ -695,19 +712,25 @@ button.chip-web:active {
   white-space: nowrap;
 }
 
-/* Talonario: la lista se encoge y el detalle entra a la derecha. */
+/* Talonario: la lista se encoge y el detalle entra a la derecha (solo desde lg). */
 .maestro-detalle {
-  display: grid;
-  grid-template-columns: 1fr 0fr;
-  column-gap: 0;
-  transition:
-    grid-template-columns var(--dur-media) var(--ease-suave),
-    column-gap var(--dur-media) var(--ease-suave);
+  display: block;
 }
 
-.maestro-detalle[data-abierto="true"] {
-  grid-template-columns: 5fr 7fr;
-  column-gap: var(--separacion);
+@media (width >= 64rem) {
+  .maestro-detalle {
+    display: grid;
+    grid-template-columns: 1fr 0fr;
+    column-gap: 0;
+    transition:
+      grid-template-columns var(--dur-media) var(--ease-suave),
+      column-gap var(--dur-media) var(--ease-suave);
+  }
+
+  .maestro-detalle[data-abierto="true"] {
+    grid-template-columns: 5fr 7fr;
+    column-gap: var(--separacion);
+  }
 }
 
 /* ---------------------------------------------------------------- Movimiento */
