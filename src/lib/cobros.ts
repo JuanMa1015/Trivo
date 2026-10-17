@@ -5,6 +5,8 @@ export const ESTADOS = [
   "procesando",
   "cobrado",
   "vencido",
+  /** El pago salió pero la wallet del pagador no lo completó (por ejemplo, sin saldo). */
+  "fallido",
 ] as const;
 export type Estado = (typeof ESTADOS)[number];
 
@@ -108,7 +110,7 @@ export type CotizacionPublica = {
 
 export const VENCE_EN_MS = 10 * 60 * 1000;
 export const PROCESO_DEMO_MS = 5_000;
-/** Un pago enviado que no llega en este tiempo se da por fallido. */
+/** Si la wallet no avisa un fallo, un pago enviado que no llega en este tiempo se da por fallido. */
 export const PAGO_SIN_CONFIRMAR_MS = 3 * 60 * 1000;
 export const MAX_MONTO = 999_999_999;
 

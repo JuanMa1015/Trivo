@@ -174,7 +174,7 @@ describe.skipIf(!url)("repositorio Prisma", () => {
     await repoReal.marcarProcesando(c.numero, "https://op.dev/out/3");
     expect(await repoReal.marcarFallido(c.numero, "sin llegada")).toBe(true);
     const final = await repoReal.obtener(c.numero);
-    expect(final?.estado).toBe("vencido");
+    expect(final?.estado).toBe("fallido");
     expect(final?.eventos.at(-1)).toMatchObject({
       tipo: "pago_fallido",
       detalle: "sin llegada",

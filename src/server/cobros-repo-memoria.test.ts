@@ -177,7 +177,7 @@ describe("pago real: transiciones", () => {
     await repo.marcarProcesando(c.numero, "https://op.dev/out/1");
     expect(await repo.marcarFallido(c.numero, "sin llegada")).toBe(true);
     const final = await repo.obtener(c.numero);
-    expect(final?.estado).toBe("vencido");
+    expect(final?.estado).toBe("fallido");
     expect(final?.eventos.at(-1)).toMatchObject({
       tipo: "pago_fallido",
       detalle: "sin llegada",

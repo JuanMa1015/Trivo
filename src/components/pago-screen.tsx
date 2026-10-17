@@ -200,6 +200,29 @@ export function PagoScreen({ token }: { token: string }) {
     );
   }
 
+  if (pago.estado === "fallido") {
+    return (
+      <main className={contenedor}>
+        {encabezado}
+        <section
+          className="recibo flex flex-col items-start gap-4 p-5"
+          role="alert"
+        >
+          <h1 className="text-3xl font-bold leading-tight text-critico">
+            {t.fallido}
+          </h1>
+          <p className="text-secondary/70">{t.fallidoAyuda}</p>
+          <Link
+            href="/pagar"
+            className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary text-lg font-bold text-white"
+          >
+            {t.otroCodigo}
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
   if (pago.estado === "vencido") {
     return (
       <main className={contenedor}>

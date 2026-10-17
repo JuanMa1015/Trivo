@@ -37,10 +37,13 @@ export type RepoCobros = {
   marcarProcesando(
     numero: number,
     outgoingPaymentUrl: string,
+    tokenPago?: string,
   ): Promise<boolean>;
+  /** Token del permiso del pagador, mientras el pago sigue en proceso. Nunca sale por la API. */
+  tokenDePago(numero: number): Promise<string | undefined>;
   /** Open Payments real: el dinero llegó. Solo desde esperando o procesando. */
   marcarCobrado(numero: number, detalle: string): Promise<boolean>;
-  /** Open Payments real: el pago enviado no llegó. Solo desde procesando. */
+  /** Open Payments real: la wallet no completó el pago o no llegó. Solo desde procesando. */
   marcarFallido(numero: number, detalle: string): Promise<boolean>;
   listarProcesando(): Promise<Cobro[]>;
 };

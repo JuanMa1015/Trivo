@@ -11,6 +11,10 @@ const ESTILO: Record<Estado, { clase: string; texto: string }> = {
     clase: "border border-secondary/30 text-secondary/70",
     texto: "Vencido",
   },
+  fallido: {
+    clase: "border border-critico text-critico",
+    texto: "Pago fallido",
+  },
 };
 
 export function EstadoChip({ estado }: { estado: Estado }) {

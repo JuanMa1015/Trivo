@@ -328,11 +328,15 @@ export function crearRepoPrisma(
       return { ok: false, motivo: "no_disponible", estado: fila.estado };
     },
 
-    marcarProcesando: (numero, outgoingPaymentUrl) =>
+    marcarProcesando: (numero, outgoingPaymentUrl, tokenPago) =>
       transicion(
         numero,
         ["esperando"],
-        { estado: "procesando", outgoingPaymentUrl },
+        {
+          estado: "procesando",
+          outgoingPaymentUrl,
+          outgoingToken: tokenPago ?? null,
+        },
         { tipo: "pago_enviado" },
       ),
 
@@ -340,7 +344,7 @@ export function crearRepoPrisma(
       transicion(
         numero,
         ["esperando", "procesando"],
-        { estado: "cobrado", pagadoEn: ahora() },
+        { estado: "cobrado", pagadoEn: ahora(), outgoingToken: null },
         { tipo: "cobrado", detalle },
       ),
 
@@ -348,9 +352,14 @@ export function crearRepoPrisma(
       transicion(
         numero,
         ["procesando"],
-        { estado: "vencido" },
+        { estado: "fallido", outgoingToken: null },
         { tipo: "pago_fallido", detalle },
       ),
+
+    async tokenDePago(numero) {
+      const fila = await porNumero(obtenerPrisma(), numero);
+      return fila?.outgoingToken ?? undefined;
+    },
 
     async listarProcesando() {
       const prisma = obtenerPrisma();
