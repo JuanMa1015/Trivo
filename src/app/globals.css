@@ -660,6 +660,62 @@ body {
     transform 120ms var(--ease-salida);
 }
 
+/* Píldora: acción pequeña en la esquina de una tarjeta ("Calcular", "Cambiar"). */
+.pildora-web {
+  display: inline-flex;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--color-aqua) 18%, #fff);
+  color: var(--color-primary);
+  font-size: var(--text-web-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    transform 120ms var(--ease-salida),
+    background-color 240ms var(--ease-suave);
+}
+
+.pildora-web:hover {
+  background: color-mix(in srgb, var(--color-aqua) 35%, #fff);
+}
+
+.pildora-web:active {
+  transform: scale(0.96);
+}
+
+/* Opción que se elige entre varias (como los conceptos de Cobrar). */
+.opcion-web {
+  display: grid;
+  height: 44px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-aqua) 15%, transparent);
+  color: var(--color-tinta);
+  font-size: var(--text-web-sm);
+  font-weight: 700;
+  transition:
+    transform 120ms var(--ease-salida),
+    background-color 240ms var(--ease-suave),
+    color 240ms var(--ease-suave);
+}
+
+.opcion-web:hover {
+  background: color-mix(in srgb, var(--color-aqua) 30%, transparent);
+}
+
+.opcion-web[aria-pressed="true"] {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.opcion-web:active {
+  transform: scale(0.96);
+}
+
 button.chip-web:active {
   transform: scale(0.96);
 }

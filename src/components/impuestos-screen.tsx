@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import {
+  IconCalculadora,
   IconDocumento,
   IconEscudo,
   IconGrafico,
+  IconInfo,
   IconReloj,
 } from "@/components/icons";
 import { CarruselTips } from "@/components/web/carrusel-tips";
@@ -13,13 +15,11 @@ import { pesosWeb } from "@/components/web/formato";
 import { HeroWeb } from "@/components/web/hero-web";
 import type { Tono3D } from "@/components/web/icono-3d";
 import { NavComercio } from "@/components/web/nav-web";
-import { Selector } from "@/components/web/selector";
+import { Modal } from "@/components/web/modal";
 import { TarjetaDato } from "@/components/web/tarjeta-dato";
 import {
   ANIO_GRAVABLE_A_DECLARAR,
   ANIO_GRAVABLE_EN_CURSO,
-  CONSEJOS,
-  NO_EXIME,
   avancesDelAnio,
   estadoPlazo,
   hoyEnColombia,
@@ -27,6 +27,7 @@ import {
   multaExtemporanea,
   multaPorNoDeclarar,
   plazoRenta,
+  sancionMinima,
   type AvanceTope,
 } from "@/lib/impuestos";
 import { AVISO_TRIBUTARIO, type Nivel } from "@/lib/topes";
@@ -61,6 +62,13 @@ const SI_SUPERAS: Record<string, string> = {
   facturacion: "Tendrás que facturar electrónicamente.",
 };
 
+/** Lo mismo, completo, para el globo de información. */
+const SI_SUPERAS_COMPLETO: Record<string, string> = {
+  "renta-ingresos": `Si cierras ${ANIO_GRAVABLE_EN_CURSO} por encima de este tope, tendrás que declarar renta del año ${ANIO_GRAVABLE_EN_CURSO}, aunque no debas pagar impuesto.`,
+  facturacion:
+    "Si lo superas, debes inscribirte como responsable de IVA y facturar electrónicamente cada venta.",
+};
+
 /** Ícono, tono y nombre corto de cada tope. */
 const TOPE: Record<
   string,
@@ -85,16 +93,40 @@ const TRAZO: Record<Nivel, string> = {
   superado: "stroke-critico",
 };
 
-const MESES = Array.from({ length: 12 }, (_, i) => {
-  const n = i + 1;
-  return {
-    valor: String(n),
-    texto: `${n} ${n === 1 ? "mes" : "meses"}${n === 12 ? " o más" : ""}`,
-  };
-});
-
-/** Lo que debes saber, uno a la vez. */
-const TIPS = [{ titulo: "Ojo", texto: NO_EXIME }, ...CONSEJOS];
+/** Lo que debes saber, uno a la vez y en pocas palabras. */
+const TIPS = [
+  {
+    titulo: "Ojo",
+    texto:
+      "No saber la norma no te exime: la obligación nace al pasar el tope.",
+  },
+  {
+    titulo: "Declara aunque no pagues",
+    texto: "Si pasas un tope, declaras aunque el impuesto salga en cero.",
+  },
+  {
+    titulo: "Un tope basta",
+    texto:
+      "Ingresos, compras, consignaciones o patrimonio: con pasar uno, declaras.",
+  },
+  {
+    titulo: "Suma todo",
+    texto:
+      "Aquí solo cuenta lo cobrado con Trivo. Suma lo que vendes por otros medios.",
+  },
+  {
+    titulo: "Tus cobros dejan rastro",
+    texto: "Bancos y wallets reportan movimientos a la DIAN.",
+  },
+  {
+    titulo: "Guarda tus soportes",
+    texto: "Comprobantes y facturas, por al menos 5 años.",
+  },
+  {
+    titulo: "Ponte al día pronto",
+    texto: "Declarar tarde por tu cuenta cuesta menos que esperar a la DIAN.",
+  },
+];
 
 const soloDigitos = (texto: string, largo: number) =>
   texto.replace(/\D/g, "").slice(0, largo);
@@ -172,10 +204,10 @@ export function ImpuestosScreen() {
     ) : null;
 
   const topes = avances.map((a) => (
-    <TarjetaTope key={a.id} a={a} listo={listo} />
+    <TarjetaTope key={a.id} a={a} ingresos={ingresos} listo={listo} />
   ));
   const fecha = <FechaLimite ahora={ahora} />;
-  const multa = <Multa ahora={ahora} ingresos={ingresos} />;
+  const multa = <Multa ahora={ahora} />;
   const pie = <p className="text-web-xs text-ink/70">{AVISO_TRIBUTARIO}</p>;
 
   return (
@@ -197,7 +229,8 @@ export function ImpuestosScreen() {
         }
       >
         {aviso}
-        <div className="web-escalonado grid min-h-0 flex-1 grid-cols-1 gap-(--separacion) sm:grid-cols-2 lg:grid-cols-4">
+        {/* Encima de los consejos: la información de un tope puede pasar sobre ellos. */}
+        <div className="web-escalonado relative z-10 grid min-h-0 flex-1 grid-cols-1 gap-(--separacion) sm:grid-cols-2 lg:grid-cols-4">
           {topes}
           {fecha}
           {multa}
@@ -245,7 +278,16 @@ function Anillo({ porcentaje, trazo }: { porcentaje: number; trazo: string }) {
   );
 }
 
-function TarjetaTope({ a, listo }: { a: AvanceTope; listo: boolean }) {
+function TarjetaTope({
+  a,
+  ingresos,
+  listo,
+}: {
+  a: AvanceTope;
+  ingresos: number;
+  listo: boolean;
+}) {
+  const id = useId();
   const { porcentaje, restante, nivel } = a.progreso;
   const estilo = NIVEL[nivel];
   const tope = TOPE[a.id] ?? {
@@ -254,25 +296,54 @@ function TarjetaTope({ a, listo }: { a: AvanceTope; listo: boolean }) {
     nombre: a.nombre,
   };
   return (
-    <TarjetaDato
-      Icono={tope.Icono}
-      tono={tope.tono}
-      etiqueta={tope.nombre}
-      valor={listo ? estilo.etiqueta : "…"}
-      claseValor={estilo.texto}
-      esquina={
-        <Anillo porcentaje={listo ? porcentaje : 0} trazo={TRAZO[nivel]} />
-      }
-      detalle={
-        !listo ? undefined : nivel === "ok" ? (
-          <>Te faltan {pesosWeb(restante)}</>
-        ) : (
-          <span role="alert" className={`font-bold ${estilo.texto}`}>
-            {SI_SUPERAS[a.id]}
+    // La información completa aparece sobre la tarjeta: con el mouse encima, con el foco
+    // del teclado o al tocarla en el celular. En la tarjeta queda solo lo justo.
+    <div
+      tabIndex={0}
+      aria-describedby={`${id}-info`}
+      className="group relative z-0 grid cursor-help rounded-web outline-none hover:z-30 focus:z-30 focus-visible:ring-4 focus-visible:ring-primary/30"
+    >
+      <TarjetaDato
+        Icono={tope.Icono}
+        tono={tope.tono}
+        etiqueta={tope.nombre}
+        valor={listo ? estilo.etiqueta : "…"}
+        claseValor={estilo.texto}
+        esquina={
+          <span className="flex items-center gap-2">
+            <IconInfo
+              width={18}
+              height={18}
+              className="text-ink/50 transition-colors duration-200 group-hover:text-primary"
+            />
+            <Anillo porcentaje={listo ? porcentaje : 0} trazo={TRAZO[nivel]} />
           </span>
-        )
-      }
-    />
+        }
+        detalle={
+          !listo ? undefined : nivel === "ok" ? (
+            <>Te faltan {pesosWeb(restante)}</>
+          ) : (
+            <span role="alert" className={`font-bold ${estilo.texto}`}>
+              {SI_SUPERAS[a.id]}
+            </span>
+          )
+        }
+      />
+      <div
+        id={`${id}-info`}
+        role="tooltip"
+        className="pointer-events-none invisible absolute inset-x-0 top-0 z-40 flex min-h-full scale-[0.98] flex-col justify-center gap-2 rounded-web bg-tinta p-5 text-web-sm text-white opacity-0 shadow-tarjeta ring-2 ring-aqua/50 transition-[opacity,scale,visibility] duration-200 group-hover:visible group-hover:scale-100 group-hover:opacity-100 group-focus:visible group-focus:scale-100 group-focus:opacity-100"
+      >
+        <p className="font-bold text-aqua">{a.nombre}</p>
+        <p>
+          <strong>{pesosWeb(ingresos)}</strong> de {pesosWeb(a.limite)} (
+          {porcentaje}%)
+          {nivel === "superado" ? null : <> · te faltan {pesosWeb(restante)}</>}
+        </p>
+        <p className="text-white/80">{a.descripcion}</p>
+        <p className="text-white/80">{SI_SUPERAS_COMPLETO[a.id]}</p>
+      </div>
+    </div>
   );
 }
 
@@ -304,7 +375,7 @@ function FechaLimite({ ahora }: { ahora: number }) {
           <button
             type="button"
             onClick={() => setDigitos("")}
-            className="h-10 rounded-full bg-white/80 px-4 text-web-sm font-bold text-primary shadow-suave transition-colors duration-200 hover:bg-white"
+            className="pildora-web"
           >
             Cambiar
           </button>
@@ -328,7 +399,7 @@ function FechaLimite({ ahora }: { ahora: number }) {
       {plazo ? null : (
         <label className="mt-1 flex flex-col gap-2 text-web-sm">
           <span className="text-ink/70">
-            Escribe los 2 últimos dígitos de tu cédula o NIT
+            Últimos 2 dígitos de tu cédula o NIT
           </span>
           <input
             value={digitos}
@@ -344,37 +415,178 @@ function FechaLimite({ ahora }: { ahora: number }) {
   );
 }
 
-function Multa({ ahora, ingresos }: { ahora: number; ingresos: number }) {
+/** Tarjeta de entrada: el cálculo, con su formulario, va en un modal. */
+function Multa({ ahora }: { ahora: number }) {
+  const [abierto, setAbierto] = useState(false);
+  return (
+    <>
+      <TarjetaDato
+        Icono={IconEscudo}
+        tono="tinta"
+        etiqueta="Declarar tarde cuesta desde"
+        valor={pesosWeb(sancionMinima())}
+        esquina={
+          <button
+            type="button"
+            onClick={() => setAbierto(true)}
+            aria-haspopup="dialog"
+            className="pildora-web"
+          >
+            <IconCalculadora width={18} height={18} />
+            Calcular
+          </button>
+        }
+        detalle="Calcula tu caso en un minuto."
+      />
+      <Modal
+        abierto={abierto}
+        onCerrar={() => setAbierto(false)}
+        titulo="¿Cuánto cuesta declarar tarde?"
+        subtitulo={`Declaración de renta del año ${ANIO_GRAVABLE_A_DECLARAR}.`}
+      >
+        {/* Se monta al abrir: cada vez empieza con los meses sugeridos. */}
+        {abierto ? <CalculadoraMulta ahora={ahora} /> : null}
+      </Modal>
+    </>
+  );
+}
+
+function CalculadoraMulta({ ahora }: { ahora: number }) {
   const [digitos] = useDocumento();
   const plazo = plazoRenta(digitos);
   const sugeridos = plazo ? mesesDeRetraso(plazo, hoyEnColombia(ahora)) : 0;
-  const [meses, setMeses] = useState<number | null>(null);
-  const m = meses ?? Math.min(Math.max(sugeridos, 1), 12);
-  // Con lo cobrado en Trivo este año y sin impuesto a cargo: el caso más común.
-  const tarde = multaExtemporanea({ ingresos, impuesto: 0, meses: m });
-  const emplazado = multaPorNoDeclarar(ingresos);
+  const [ingresos, setIngresos] = useState("");
+  const [impuesto, setImpuesto] = useState("");
+  const [meses, setMeses] = useState(Math.min(Math.max(sugeridos, 1), 12));
+
+  // Los ingresos son los del año que se declara: lo cobrado en Trivo este año no sirve.
+  const ing = Number(ingresos) || 0;
+  const imp = Number(impuesto) || 0;
+  const minimo = sancionMinima();
+  const tarde = multaExtemporanea({ ingresos: ing, impuesto: imp, meses });
+  const sancionado = multaPorNoDeclarar(ing);
 
   return (
-    <TarjetaDato
-      Icono={IconEscudo}
-      tono="tinta"
-      etiqueta="Si declaras tarde, pagarías"
-      valor={`≈ ${pesosWeb(tarde)}`}
-      esquina={
-        <Selector
-          etiqueta="Meses de retraso"
-          valor={String(m)}
-          onCambio={(v) => setMeses(Number(v))}
-          opciones={MESES}
-          compacto
+    <div className="flex flex-col gap-5 text-web-sm">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Campo
+          etiqueta={`Tus ingresos de ${ANIO_GRAVABLE_A_DECLARAR}`}
+          valor={ingresos}
+          alCambiar={(v) => setIngresos(soloDigitos(v, 11))}
         />
-      }
-      detalle={
-        <>
-          Si esperas a que la DIAN te busque:{" "}
-          <strong className="text-error">≈ {pesosWeb(emplazado)}</strong>
-        </>
-      }
-    />
+        <Campo
+          etiqueta="Impuesto a pagar (opcional)"
+          valor={impuesto}
+          alCambiar={(v) => setImpuesto(soloDigitos(v, 11))}
+        />
+      </div>
+
+      <fieldset>
+        <legend className="mb-2 font-bold text-tinta">Meses de retraso</legend>
+        <div className="grid grid-cols-6 gap-2">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={meses === n}
+              aria-label={`${n} ${n === 1 ? "mes" : "meses"}${n === 12 ? " o más" : ""}`}
+              onClick={() => setMeses(n)}
+              className="opcion-web"
+            >
+              {n === 12 ? "12+" : n}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
+      {ing > 0 ? (
+        <div
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          aria-live="polite"
+        >
+          <Resultado
+            titulo="Si declaras tarde"
+            valor={tarde}
+            minimo={tarde === minimo}
+          />
+          <Resultado
+            titulo="Si la DIAN te sanciona por no declarar"
+            valor={sancionado}
+            minimo={sancionado === minimo}
+            grave
+          />
+        </div>
+      ) : (
+        <p className="rounded-3xl bg-aqua/15 p-5 text-center text-ink/70">
+          Escribe tus ingresos para ver el cálculo.
+        </p>
+      )}
+
+      {ing > 0 && tarde === minimo ? (
+        <p className="text-web-xs text-ink/70">
+          Con esos ingresos aplica la sanción mínima de la ley (10 UVT): por eso
+          no cambia con los meses.
+        </p>
+      ) : null}
+      <p className="text-web-xs text-ink/70">
+        Sin intereses de mora. Es una estimación: confírmala con la DIAN o un
+        contador.
+      </p>
+    </div>
+  );
+}
+
+function Campo({
+  etiqueta,
+  valor,
+  alCambiar,
+}: {
+  etiqueta: string;
+  valor: string;
+  alCambiar: (v: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-2">
+      <span className="font-bold text-tinta">{etiqueta}</span>
+      <input
+        value={valor ? `$${Number(valor).toLocaleString("es-CO")}` : ""}
+        onChange={(e) => alCambiar(e.target.value)}
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="$0"
+        className="campo-web"
+      />
+    </label>
+  );
+}
+
+function Resultado({
+  titulo,
+  valor,
+  minimo,
+  grave = false,
+}: {
+  titulo: string;
+  valor: number;
+  /** La fórmula da menos que la sanción mínima, que es la que se cobra. */
+  minimo: boolean;
+  grave?: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-col gap-1 rounded-3xl p-5 ${grave ? "bg-error/10" : "bg-aqua/15"}`}
+    >
+      <p className="font-semibold text-ink/70">{titulo}</p>
+      <p
+        className={`text-medio font-extrabold ${grave ? "text-error" : "text-primary"}`}
+      >
+        ≈ {pesosWeb(valor)}
+      </p>
+      {minimo ? (
+        <span className="w-fit rounded-full bg-white/80 px-3 py-1 text-web-xs font-bold text-ink/70">
+          Mínimo legal
+        </span>
+      ) : null}
+    </div>
   );
 }

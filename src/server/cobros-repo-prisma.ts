@@ -391,7 +391,12 @@ export function crearRepoPrisma(
     async perfil() {
       const fila = await obtenerPrisma().comercio.findUniqueOrThrow({
         where: { id: await comercio() },
-        select: { nombre: true, usuario: true, ultimoNumero: true },
+        select: {
+          nombre: true,
+          usuario: true,
+          ultimoNumero: true,
+          creadoEn: true,
+        },
       });
       return {
         registrado: fila.usuario !== null,
@@ -399,6 +404,7 @@ export function crearRepoPrisma(
         comercio: fila.nombre,
         cobrosCreados: fila.ultimoNumero,
         limite: LIMITE_COBROS_SIN_REGISTRO,
+        creadoEn: fila.creadoEn.toISOString(),
       };
     },
 

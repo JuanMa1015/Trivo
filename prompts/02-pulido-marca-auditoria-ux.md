@@ -60,3 +60,21 @@ hice git pull pero no se ve los cambios
 ```text
 en la parte de crtificado el desplegable no tiene estilos, ponle estilo coherente a la listta desplegable, osea, las opciones y toca hacer scroll, reduce un poco el tamaño de las otras cards para qu eno tenga que salir el scrolll, en la parte de impuestos esta lleno de textos y scroll, como esto es demasiado intuitivo y enfocado en personas que pueden llegar a frustrarse si ve muchas cosas, entonces prefieron una card que digo lo justo a una que explique mucho, lo que hay est bien pero mas intuitivo no tan cargado, que se parezcan a las cards de resumen, aparte cuando este con la cuenta el nombre debe salir al lado de la foto de perfil y el nombre de t negocio  al lade del icono de ubicacion en el banner que haya mucha coherencia, revisa todas las paginas, has una autoria de nuevoi y corrige los puntos donde estamos fallando
 ```
+
+## 8. Subir los cambios
+
+```text
+perfecto sube los cambios, primero baja lo que ya hay, resuelve conflictoss y sube los cambios
+```
+
+## 9. Calculadora en modal e información de los topes al pasar el mouse
+
+```text
+ese de si declaras trarde no quedo muy util si quieres como es un formulario hazlo modal y en las 2 primeras cards de topes cuando uno haga un hover salga como la info complleto no en la card si no en el hoveer
+```
+
+## 10. Certificado desde que existe el comercio, cálculo de la multa y menos texto
+
+```text
+si esta app fue creada en octubre pq me deja descargar certificado de octubre para atras y mira bien como esta calculando lo de la declaracion de manera correcta a veces deja una cuota fija por mas que seleccione otra opcion si no es la una es la otra  y quitale tanto texto y ponle estilos coherentes a todo el diseño
+```

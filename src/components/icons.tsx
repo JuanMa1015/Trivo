@@ -197,3 +197,17 @@ export const IconUsuario = (p: SVGProps<SVGSVGElement>) => (
     <path d="M4 21a8 8 0 0 1 16 0" />
   </Icon>
 );
+
+export const IconInfo = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </Icon>
+);
+
+export const IconCalculadora = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="5" y="3" width="14" height="18" rx="2" />
+    <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
+  </Icon>
+);

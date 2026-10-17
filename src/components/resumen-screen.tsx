@@ -31,6 +31,7 @@ import { TarjetaDato } from "@/components/web/tarjeta-dato";
 import { NavComercio } from "@/components/web/nav-web";
 import type { CobroResumen } from "@/lib/cobros";
 import { hoyEnColombia, mesAnterior, nombreDelPeriodo } from "@/lib/impuestos";
+import { mesDeInicio } from "@/lib/perfil";
 import { usePerfil } from "@/lib/use-perfil";
 import { useAhora, usePolling } from "@/lib/use-polling";
 
@@ -215,9 +216,15 @@ function Datos({ r, cifra }: { r: Resumen; cifra: Cifra }) {
 
 /** Certificado de ventas de un mes, con código y QR para que otro lo verifique. */
 function Certificado({ ahora }: { ahora: number }) {
+  const { creadoEn } = usePerfil();
   const actual = hoyEnColombia(ahora).slice(0, 7);
-  const meses = Array.from({ length: 6 }, (_, i) => mesAnterior(actual, i));
-  const [mes, setMes] = useState(actual);
+  // Solo los meses desde que el comercio empezó en Trivo (máximo un año atrás).
+  const inicio = creadoEn ? mesDeInicio({ creadoEn }) : actual;
+  const meses = Array.from({ length: 12 }, (_, i) =>
+    mesAnterior(actual, i),
+  ).filter((m) => m >= inicio);
+  const [elegido, setMes] = useState(actual);
+  const mes = meses.includes(elegido) ? elegido : actual;
 
   return (
     <section className="tarjeta-web web-escalonado flex flex-col gap-4 p-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center 2xl:p-6">
@@ -232,15 +239,24 @@ function Certificado({ ahora }: { ahora: number }) {
           </p>
         </div>
       </div>
-      <Selector
-        etiqueta="Mes del certificado"
-        valor={mes}
-        onCambio={setMes}
-        opciones={meses.map((m) => ({
-          valor: m,
-          texto: nombreDelPeriodo(m),
-        }))}
-      />
+      {meses.length > 1 ? (
+        <Selector
+          etiqueta="Mes del certificado"
+          valor={mes}
+          onCambio={setMes}
+          opciones={meses.map((m) => ({
+            valor: m,
+            texto: nombreDelPeriodo(m),
+          }))}
+        />
+      ) : (
+        // Un solo mes posible: se muestra, no se elige.
+        <p className="campo-web min-w-52 font-semibold text-tinta">
+          <span className="first-letter:uppercase">
+            {nombreDelPeriodo(mes)}
+          </span>
+        </p>
+      )}
       <a
         href={`/api/certificado?mes=${mes}`}
         download

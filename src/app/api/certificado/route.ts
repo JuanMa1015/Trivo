@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { hoyEnColombia, limitesDelMes } from "@/lib/impuestos";
+import { mesDeInicio } from "@/lib/perfil";
 import {
   PERIODO_RE,
   codigoCertificado,
@@ -30,11 +31,12 @@ export async function GET(request: Request) {
 
   try {
     const servicio = obtenerServicio();
+    const perfil = await servicio.perfil();
+    // Ni meses de antes de que el comercio empezara en Trivo: no hay nada que certificar.
+    if (pedido < mesDeInicio(perfil))
+      return json({ error: "datos_invalidos" }, 400);
     const { desde, hasta } = limitesDelMes(pedido);
-    const [{ total, cobros }, perfil] = await Promise.all([
-      servicio.resumenCobrado(desde, hasta),
-      servicio.perfil(),
-    ]);
+    const { total, cobros } = await servicio.resumenCobrado(desde, hasta);
     const datos: DatosCertificado = {
       comercio: perfil.comercio,
       ...(perfil.usuario ? { usuario: perfil.usuario } : {}),
