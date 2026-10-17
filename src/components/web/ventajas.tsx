@@ -16,19 +16,19 @@ const VENTAJAS: {
   {
     Icono: IconRayo,
     titulo: "Directo a tu wallet",
-    texto: "El pago va de la wallet del cliente a la tuya, sin intermediarios.",
+    texto: "Del cliente a ti, sin intermediarios.",
     tono: "primario",
   },
   {
     Icono: IconEscudo,
     titulo: "El cliente lo aprueba",
-    texto: "El dinero solo se mueve cuando quien paga lo aprueba en su wallet.",
+    texto: "Nada se mueve sin su aprobación.",
     tono: "cielo",
   },
   {
     Icono: IconMundo,
     titulo: "Cualquier moneda",
-    texto: "Un turista paga en su moneda, ve la tasa antes y tú recibes pesos.",
+    texto: "Él paga en su moneda, tú recibes pesos.",
     tono: "agua",
   },
 ];

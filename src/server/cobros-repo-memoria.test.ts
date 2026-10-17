@@ -233,6 +233,19 @@ describe("totalCobradoDelAnio", () => {
 describe("cuenta del comercio", () => {
   const sinSemilla = { completarDemo: false, semilla: false };
 
+  it("sabe desde cuándo existe el comercio (incluye los cobros de ejemplo)", async () => {
+    const t = Date.parse("2026-10-17T15:00:00.000Z");
+    const vacio = crearRepoMemoria(() => t, sinSemilla);
+    expect((await vacio.perfil()).creadoEn).toBe(new Date(t).toISOString());
+    const conSemilla = crearRepoMemoria(() => t, {
+      completarDemo: false,
+      semilla: true,
+    });
+    const desde = Date.parse((await conSemilla.perfil()).creadoEn);
+    const cobros = await conSemilla.listar();
+    expect(desde).toBe(Math.min(...cobros.map((c) => Date.parse(c.creadoEn))));
+  });
+
   it("al principio no hay cuenta y los cobros de ejemplo no cuentan", async () => {
     const repo = crearRepoMemoria(Date.now, {
       completarDemo: true,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hoyEnColombia } from "./impuestos";
 
 /**
  * Cuenta del comercio: usuario, nombre del comercio y contraseña. No se pide al empezar:
@@ -15,7 +16,14 @@ export type Perfil = {
   /** Cobros creados hasta ahora: sirve para el aviso y para la obligación de registrarse. */
   cobrosCreados: number;
   limite: number;
+  /** Cuándo empezó el comercio en Trivo (ISO). Antes no hay ventas que certificar. */
+  creadoEn: string;
 };
+
+/** Primer mes (AAAA-MM, hora de Colombia) que se puede certificar. */
+export function mesDeInicio(p: Pick<Perfil, "creadoEn">): string {
+  return hoyEnColombia(Date.parse(p.creadoEn)).slice(0, 7);
+}
 
 /** Cuántos cobros le quedan antes de que registrarse sea obligatorio. */
 export function cobrosRestantes(p: Pick<Perfil, "cobrosCreados" | "limite">) {

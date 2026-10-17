@@ -59,6 +59,7 @@ export function crearRepoMemoria(
     comercio: COMERCIO_EJEMPLO,
   };
   let creadosPorElUsuario = 0;
+  const inicio = ahora();
 
   const iso = (ms: number) => new Date(ms).toISOString();
 
@@ -289,6 +290,13 @@ export function crearRepoMemoria(
         comercio: cuenta.comercio,
         cobrosCreados: creadosPorElUsuario,
         limite: LIMITE_COBROS_SIN_REGISTRO,
+        // Los cobros de ejemplo pueden ser un poco anteriores al arranque.
+        creadoEn: iso(
+          Math.min(
+            inicio,
+            ...[...cobros.values()].map((c) => Date.parse(c.creadoEn)),
+          ),
+        ),
       };
     },
     async registrarPerfil({ usuario, comercio }) {

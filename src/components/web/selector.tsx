@@ -117,7 +117,7 @@ export function Selector({
         }}
         className={
           compacto
-            ? "flex h-10 items-center gap-2 rounded-full bg-white/80 px-4 text-web-sm font-bold text-tinta shadow-suave ring-1 ring-ink/8 transition-colors duration-200 hover:bg-white"
+            ? "pildora-web"
             : "campo-web flex w-full min-w-52 items-center justify-between gap-3 text-left font-semibold text-tinta"
         }
       >
