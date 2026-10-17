@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { TASA_EJEMPLO_COP_POR_USD } from "@/lib/conversion";
+import type { Perfil } from "@/lib/perfil";
 import {
   PAGO_SIN_CONFIRMAR_MS,
   VENCE_EN_MS,
@@ -40,6 +41,20 @@ export type ServicioPagos = {
   obtener(numero: number): Promise<Cobro | undefined>;
   /** El vendedor llega por el id aleatorio del cobro; el N.º solo se muestra. */
   numeroDe(id: string): Promise<number | undefined>;
+  /** Pesos cobrados en el año (hora de Colombia), para los topes tributarios. */
+  ingresosDelAnio(anio: number): Promise<number>;
+  /** Total y cantidad de cobros cobrados entre dos instantes (ms), para el certificado de ventas. */
+  resumenCobrado(
+    desde: number,
+    hasta: number,
+  ): Promise<{ total: number; cobros: number }>;
+  /** Cuenta del comercio (usuario y nombre) y cuántos cobros lleva. */
+  perfil(): Promise<Perfil>;
+  registrarPerfil(datos: {
+    usuario: string;
+    comercio: string;
+    passwordHash: string;
+  }): Promise<boolean>;
   registrarEvento(numero: number, tipo: TipoEvento): Promise<boolean>;
   /** Solo demo. */
   simularPago(numero: number): Promise<ResultadoPago>;
@@ -122,6 +137,10 @@ export function crearServicioDemo({
       return c && firmar(c, c.id, secreto);
     },
     numeroDe: async (id) => (await repo.obtenerPorId(id))?.numero,
+    ingresosDelAnio: (anio) => repo.totalCobradoDelAnio(anio),
+    resumenCobrado: (desde, hasta) => repo.resumenCobrado(desde, hasta),
+    perfil: () => repo.perfil(),
+    registrarPerfil: (datos) => repo.registrarPerfil(datos),
     registrarEvento: (numero, tipo) => repo.registrar(numero, tipo),
     simularPago: (numero) =>
       repo.iniciarPagoDemo(numero, "simulado por el vendedor (demo)"),
@@ -333,6 +352,9 @@ export function crearServicioOpenPayments({
         receptora: r,
         monto: esperado(monto, r),
         venceEn: new Date(ahora() + VENCE_EN_MS),
+        descripcion: [(await repo.perfil()).comercio, concepto]
+          .filter(Boolean)
+          .join(" · "),
       });
       return repo.crear(monto, concepto, { incomingPaymentUrl });
     },
@@ -349,6 +371,10 @@ export function crearServicioOpenPayments({
     },
 
     numeroDe: async (id) => (await repo.obtenerPorId(id))?.numero,
+    ingresosDelAnio: (anio) => repo.totalCobradoDelAnio(anio),
+    resumenCobrado: (desde, hasta) => repo.resumenCobrado(desde, hasta),
+    perfil: () => repo.perfil(),
+    registrarPerfil: (datos) => repo.registrarPerfil(datos),
     registrarEvento: (numero, tipo) => repo.registrar(numero, tipo),
 
     async simularPago() {

@@ -6,6 +6,8 @@ import {
   type CobroResumen,
   type Evento,
 } from "@/lib/cobros";
+import { limitesDelAnio } from "@/lib/impuestos";
+import { LIMITE_COBROS_SIN_REGISTRO } from "@/lib/perfil";
 import { COMERCIO_EJEMPLO } from "@/lib/talonario";
 import { nuevoCodigo, nuevoToken } from "./confirmacion";
 import type { OpcionesRepo, RepoCobros, ResultadoPago } from "./tipos";
@@ -120,7 +122,6 @@ export function crearRepoPrisma(
     if (comercioId) return comercioId;
     const prisma = obtenerPrisma();
     const existente = await prisma.comercio.findFirst({
-      where: { nombre: COMERCIO_EJEMPLO },
       orderBy: { creadoEn: "asc" },
       select: { id: true },
     });
@@ -359,6 +360,60 @@ export function crearRepoPrisma(
     async tokenDePago(numero) {
       const fila = await porNumero(obtenerPrisma(), numero);
       return fila?.outgoingToken ?? undefined;
+    },
+
+    async totalCobradoDelAnio(anio) {
+      const { desde, hasta } = limitesDelAnio(anio);
+      const { _sum } = await obtenerPrisma().cobro.aggregate({
+        _sum: { monto: true },
+        where: {
+          comercioId: await comercio(),
+          estado: "cobrado",
+          pagadoEn: { gte: new Date(desde), lt: new Date(hasta) },
+        },
+      });
+      return _sum.monto ?? 0;
+    },
+
+    async resumenCobrado(desde, hasta) {
+      const { _sum, _count } = await obtenerPrisma().cobro.aggregate({
+        _sum: { monto: true },
+        _count: true,
+        where: {
+          comercioId: await comercio(),
+          estado: "cobrado",
+          pagadoEn: { gte: new Date(desde), lt: new Date(hasta) },
+        },
+      });
+      return { total: _sum.monto ?? 0, cobros: _count };
+    },
+
+    async perfil() {
+      const fila = await obtenerPrisma().comercio.findUniqueOrThrow({
+        where: { id: await comercio() },
+        select: { nombre: true, usuario: true, ultimoNumero: true },
+      });
+      return {
+        registrado: fila.usuario !== null,
+        ...(fila.usuario ? { usuario: fila.usuario } : {}),
+        comercio: fila.nombre,
+        cobrosCreados: fila.ultimoNumero,
+        limite: LIMITE_COBROS_SIN_REGISTRO,
+      };
+    },
+
+    async registrarPerfil({ usuario, comercio: nombre, passwordHash }) {
+      try {
+        const { count } = await obtenerPrisma().comercio.updateMany({
+          where: { id: await comercio(), usuario: null },
+          data: { usuario, nombre, passwordHash },
+        });
+        return count === 1;
+      } catch (error) {
+        // Ese usuario ya existe en otro comercio: no se registra, sin dar más pistas.
+        if (esViolacionUnica(error)) return false;
+        throw error;
+      }
     },
 
     async listarProcesando() {

@@ -1,4 +1,5 @@
 import type { Cobro, CobroResumen, Monto, TipoEvento } from "@/lib/cobros";
+import type { Perfil } from "@/lib/perfil";
 
 export type ResultadoPago =
   | { ok: true; estado: Cobro["estado"] }
@@ -46,6 +47,22 @@ export type RepoCobros = {
   /** Open Payments real: la wallet no completó el pago o no llegó. Solo desde procesando. */
   marcarFallido(numero: number, detalle: string): Promise<boolean>;
   listarProcesando(): Promise<Cobro[]>;
+  /** Pesos cobrados en un año calendario (hora de Colombia): lo que cuenta para los topes. */
+  totalCobradoDelAnio(anio: number): Promise<number>;
+  /** Total y cantidad de cobros cobrados entre dos instantes (ms): `desde` incluido, `hasta` excluido. */
+  resumenCobrado(
+    desde: number,
+    hasta: number,
+  ): Promise<{ total: number; cobros: number }>;
+
+  /** Cuenta del comercio y cuántos cobros lleva. */
+  perfil(): Promise<Perfil>;
+  /** Registra la cuenta. Falso si el comercio ya tiene una: no se pisa. */
+  registrarPerfil(datos: {
+    usuario: string;
+    comercio: string;
+    passwordHash: string;
+  }): Promise<boolean>;
 };
 
 export type OpcionesRepo = {

@@ -24,7 +24,11 @@ export async function POST(request: Request) {
   const cuerpo = await leerCuerpo(request, crearCobroSchema);
   if (!cuerpo.ok) return cuerpo.respuesta;
   try {
-    const cobro = await obtenerServicio().crearCobro(
+    const servicio = obtenerServicio();
+    const perfil = await servicio.perfil();
+    if (!perfil.registrado && perfil.cobrosCreados >= perfil.limite)
+      return json({ error: "registro_requerido" }, 403);
+    const cobro = await servicio.crearCobro(
       cuerpo.data.monto,
       cuerpo.data.concepto,
     );

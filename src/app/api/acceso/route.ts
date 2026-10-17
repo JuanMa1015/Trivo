@@ -6,7 +6,7 @@ import {
   leerCuerpo,
   respuestaDeError,
 } from "@/server/http";
-import { crearLimitador, ipDe } from "@/server/rate-limit";
+import { permitirIntentoDePin } from "@/server/intentos-pin";
 import {
   accesoConfigurado,
   accesoRequerido,
@@ -14,11 +14,6 @@ import {
   crearSesion,
   pinCorrecto,
 } from "@/server/vendedor";
-
-// Dos topes: por IP y uno global. La IP la puede inventar quien llame directo al puerto
-// (sin proxy delante), así que el tope global es el que de verdad frena adivinar la clave.
-const porIp = crearLimitador(5, 60_000);
-const global = crearLimitador(20, 60_000);
 
 const accesoSchema = z.object({ pin: z.string().min(1).max(128) });
 
@@ -28,8 +23,7 @@ export async function POST(request: Request) {
   if (!accesoRequerido()) return json({ ok: true });
   if (!accesoConfigurado())
     return json({ error: "acceso_no_configurado" }, 503);
-  if (!porIp(ipDe(request)) || !global("global"))
-    return demasiadasSolicitudes();
+  if (!permitirIntentoDePin(request)) return demasiadasSolicitudes();
 
   const cuerpo = await leerCuerpo(request, accesoSchema);
   if (!cuerpo.ok) return cuerpo.respuesta;

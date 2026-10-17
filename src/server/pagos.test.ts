@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { COMERCIO_EJEMPLO } from "@/lib/talonario";
 import {
   PAGO_SIN_CONFIRMAR_MS,
   TOKEN_RE,
@@ -52,6 +53,7 @@ function crearPuertoFalso(ahora: () => number) {
     falloAlCompletar: false,
     pagoSalienteFallido: false,
     consultasSalientes: [] as string[],
+    descripciones: [] as (string | undefined)[],
     completados: [] as string[],
     consultas: 0,
   };
@@ -70,7 +72,8 @@ function crearPuertoFalso(ahora: () => number) {
         return wallet(url, "Unabot Jose", "USD", AUTH_PAGADOR);
       throw new ErrorPago("wallet_invalida");
     },
-    async crearCobro({ monto }) {
+    async crearCobro({ monto, descripcion }) {
+      control.descripciones.push(descripcion);
       const incomingPaymentUrl = `https://ilp.interledger-test.dev/recursos/incoming/${incoming.size + 1}`;
       incoming.set(incomingPaymentUrl, monto);
       return { incomingPaymentUrl };
@@ -654,5 +657,17 @@ describe("servicio Open Payments: transparencia del precio", () => {
     const cobro = await m.servicio.crearCobro(50_000, "");
     const cotizacion = await m.servicio.cotizar(cobro.token, PAGADOR);
     expect(cotizacion.tasaReferencia).toBeNull();
+  });
+});
+
+describe("servicio Open Payments: lo que ve la wallet del vendedor", () => {
+  it("el incoming payment lleva el comercio y el concepto como descripción", async () => {
+    const m = montarReal();
+    await m.servicio.crearCobro(50_000, "Ropa");
+    await m.servicio.crearCobro(20_000, "");
+    expect(m.control.descripciones).toEqual([
+      `${COMERCIO_EJEMPLO} · Ropa`,
+      COMERCIO_EJEMPLO,
+    ]);
   });
 });

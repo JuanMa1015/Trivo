@@ -41,6 +41,9 @@ enum TipoEvento {
 model Comercio {
   id           String   @id @default(uuid()) @db.Uuid
   nombre       String
+  // Cuenta del comercio: nulas hasta que se registra. La contraseña va con hash scrypt.
+  usuario      String?  @unique
+  passwordHash String?  @map("password_hash")
   ultimoNumero Int      @default(0) @map("ultimo_numero")
   creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
   cobros       Cobro[]

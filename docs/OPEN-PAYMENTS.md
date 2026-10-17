@@ -31,6 +31,23 @@ Cada paso deja un evento en la trazabilidad: `creado`, `cotizado`, `consentimien
 
 Errores: siempre `{ "error": "<codigo>" }` con un código estable (`wallet_invalida`, `cotizacion_vencida`, `cobro_no_disponible`, `open_payments_fallo`…), sin detalles internos.
 
+### Lo que Trivo envía y lo que devuelve una wallet
+
+- **Wallet address:** solo expone `publicName`, la moneda, y las URLs de sus servidores (comprobado en la testnet). No hay correo, nombre legal ni teléfono: el protocolo evita compartir datos personales. `publicName` lo escribe el titular, así que es una pista y no una prueba de identidad.
+- **Incoming payment:** Trivo envía `metadata.description` con el comercio y el concepto (`Almacén El Centro · Ropa`). La testnet lo acepta y lo devuelve; si una wallet lo muestra depende de su proveedor.
+
+### Comprobante de pago
+
+`GET /api/cobros/[id]/comprobante?formato=a4|pos` (solo vendedor, solo cobros ya cobrados) descarga un PDF carta o un ticket POS de 80 mm. Es un recibo de Trivo con el código de confirmación; **no es una factura electrónica de venta**: esa la emite el comercio ante la DIAN con su proveedor.
+
+### Cuenta del comercio
+
+`POST /api/registro` crea la cuenta con tres datos: usuario, nombre del comercio y contraseña (hash scrypt con sal propia; nunca en claro). No se exige al empezar: una franja avisa en las pantallas del vendedor y el registro pasa a ser **obligatorio al quinto cobro** (`POST /api/cobros` responde `403 registro_requerido`). Con `VENDEDOR_PIN` definido, el PIN autoriza el registro y deja la sesión abierta; para entrar sigue valiendo solo el PIN. Hay una sola cuenta por despliegue (`ponytail`: con varios comercios, una por cada uno). La contraseña queda guardada para cambiar datos más adelante; hoy no se usa para iniciar sesión.
+
+### Certificado de ventas verificable
+
+`GET /api/certificado?mes=YYYY-MM` (solo vendedor) descarga un PDF con lo cobrado ese mes, un código `ABCD-EFGH-IJKL-MNOP` y un QR. El código es un HMAC de comercio, titular, mes, total, cantidad y fecha de emisión con el secreto del servidor, así que `/verificar` (pública) comprueba que nadie cambió una cifra, sin sesión ni consultas. El enlace lleva esos datos en la URL: quien tenga el PDF ya los tiene. No es un certificado contable ni sustituye la declaración ante la DIAN. En producción real usa `CONFIRMACION_SECRETO`; en demo el secreto es aleatorio por proceso y los certificados dejan de verificar al reiniciar.
+
 ## Configuración
 
 En `.env` (ver `.env.example`):

@@ -239,6 +239,51 @@ describe.skipIf(!url)("repositorio Prisma", () => {
     ).rejects.toThrow();
   });
 
+  it("registrar la cuenta guarda usuario y nombre una sola vez y la base valida el formato", async () => {
+    const aislado = crearRepoPrisma(() => prisma, undefined, {
+      completarDemo: false,
+      semilla: false,
+    });
+    const antes = await aislado.perfil();
+    if (!antes.registrado) {
+      const usuario = `prueba${Date.now()}`;
+      expect(
+        await aislado.registrarPerfil({
+          usuario,
+          comercio: "Tienda de prueba",
+          passwordHash: "scrypt$a$b",
+        }),
+      ).toBe(true);
+      expect(await aislado.perfil()).toMatchObject({
+        registrado: true,
+        usuario,
+        comercio: "Tienda de prueba",
+      });
+    }
+    expect(
+      await aislado.registrarPerfil({
+        usuario: "otro",
+        comercio: "Dos",
+        passwordHash: "scrypt$c$d",
+      }),
+    ).toBe(false);
+    await expect(
+      prisma.comercio.updateMany({ data: { passwordHash: "md5$x" } }),
+    ).rejects.toThrow();
+  });
+
+  it("resumenCobrado suma lo cobrado en el rango", async () => {
+    const c = await repo.crear(3_333, "");
+    await repo.marcarCobrado(c.numero, "x");
+    const ahoraMs = Date.now();
+    const { total, cobros } = await repo.resumenCobrado(
+      ahoraMs - 60_000,
+      ahoraMs + 60_000,
+    );
+    expect(total).toBeGreaterThanOrEqual(3_333);
+    expect(cobros).toBeGreaterThanOrEqual(1);
+  });
+
   it("los eventos no se pueden modificar ni borrar", async () => {
     await expect(
       prisma.evento.updateMany({ data: { detalle: "x" } }),

@@ -209,3 +209,103 @@ describe("limitador", () => {
     expect(permitir("ip", T0 + 60_000)).toBe(true);
   });
 });
+
+describe("totalCobradoDelAnio", () => {
+  it("suma solo lo cobrado dentro del año, en hora de Colombia", async () => {
+    let t = Date.UTC(2026, 11, 31, 14); // 31 dic 2026, 09:00 en Bogotá
+    const repo = crearRepoMemoria(() => t, {
+      completarDemo: false,
+      semilla: false,
+    });
+    const a = await repo.crear(10_000, "");
+    await repo.crear(7_000, ""); // sigue esperando: no cuenta
+    await repo.marcarCobrado(a.numero, "x");
+
+    t = Date.UTC(2027, 0, 1, 4, 30); // todavía 31 dic en Bogotá (23:30)
+    const b = await repo.crear(5_000, "");
+    await repo.marcarCobrado(b.numero, "x");
+
+    expect(await repo.totalCobradoDelAnio(2026)).toBe(15_000);
+    expect(await repo.totalCobradoDelAnio(2027)).toBe(0);
+  });
+});
+
+describe("cuenta del comercio", () => {
+  const sinSemilla = { completarDemo: false, semilla: false };
+
+  it("al principio no hay cuenta y los cobros de ejemplo no cuentan", async () => {
+    const repo = crearRepoMemoria(Date.now, {
+      completarDemo: true,
+      semilla: true,
+    });
+    expect(await repo.perfil()).toMatchObject({
+      registrado: false,
+      cobrosCreados: 0,
+      limite: 5,
+    });
+    await repo.crear(1_000, "");
+    expect((await repo.perfil()).cobrosCreados).toBe(1);
+  });
+
+  it("registrar guarda usuario y comercio, y renombra los cobros ya creados", async () => {
+    const repo = crearRepoMemoria(Date.now, sinSemilla);
+    const antes = await repo.crear(1_000, "");
+    expect(
+      await repo.registrarPerfil({
+        usuario: "rosa",
+        comercio: "Tienda Rosa",
+        passwordHash: "scrypt$a$b",
+      }),
+    ).toBe(true);
+    expect(await repo.perfil()).toMatchObject({
+      registrado: true,
+      usuario: "rosa",
+      comercio: "Tienda Rosa",
+    });
+    expect((await repo.obtener(antes.numero))?.comercio).toBe("Tienda Rosa");
+    expect((await repo.crear(2_000, "")).comercio).toBe("Tienda Rosa");
+  });
+
+  it("no se pisa una cuenta ya registrada", async () => {
+    const repo = crearRepoMemoria(Date.now, sinSemilla);
+    await repo.registrarPerfil({
+      usuario: "rosa",
+      comercio: "Uno",
+      passwordHash: "scrypt$a$b",
+    });
+    expect(
+      await repo.registrarPerfil({
+        usuario: "otro",
+        comercio: "Dos",
+        passwordHash: "scrypt$c$d",
+      }),
+    ).toBe(false);
+    expect(await repo.perfil()).toMatchObject({
+      usuario: "rosa",
+      comercio: "Uno",
+    });
+  });
+});
+
+describe("resumenCobrado", () => {
+  it("suma y cuenta solo lo cobrado dentro del rango", async () => {
+    let t = Date.UTC(2026, 9, 10, 15);
+    const repo = crearRepoMemoria(() => t, {
+      completarDemo: false,
+      semilla: false,
+    });
+    const a = await repo.crear(10_000, "");
+    await repo.marcarCobrado(a.numero, "x");
+    t = Date.UTC(2026, 10, 2, 15);
+    const b = await repo.crear(4_000, "");
+    await repo.marcarCobrado(b.numero, "x");
+
+    const octubre = await repo.resumenCobrado(
+      Date.UTC(2026, 9, 1, 5),
+      Date.UTC(2026, 10, 1, 5),
+    );
+    expect(octubre).toEqual({ total: 10_000, cobros: 1 });
+    const todo = await repo.resumenCobrado(0, Date.UTC(2027, 0, 1));
+    expect(todo).toEqual({ total: 14_000, cobros: 2 });
+  });
+});

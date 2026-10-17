@@ -108,7 +108,7 @@ export function crearPuertoOpenPayments(
         };
       }),
 
-    crearCobro: ({ receptora, monto, venceEn }) =>
+    crearCobro: ({ receptora, monto, venceEn, descripcion }) =>
       conSdk("crear incoming payment", async () => {
         const accessToken = await tokenSinInteraccion(receptora.authServer, [
           { type: "incoming-payment", actions: ["read", "create", "complete"] },
@@ -125,6 +125,7 @@ export function crearPuertoOpenPayments(
               assetScale: monto.escala,
             },
             expiresAt: venceEn.toISOString(),
+            ...(descripcion ? { metadata: { description: descripcion } } : {}),
           },
         );
         return { incomingPaymentUrl: incoming.id };
