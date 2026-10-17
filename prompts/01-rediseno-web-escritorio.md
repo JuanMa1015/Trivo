@@ -15,7 +15,6 @@ _Enviado: 2026-10-17T02:12:26.091Z (UTC)_
 vas a aplicar y modificar las paginas del proyecto de modo que queden como en este archivo, sin afectar absolutamente nada de la logica, vas a hacerlo de manera muy ordenada, con buenas practicas, teniendo en cuenta que el front es en next, mucho orden y claridad, recuerda no afectes nada de la logica, en cobrar, va solo cosas del cobro, nada de otra cosas, lo mismo en resumen , y lo mismo en talonario.
 ```
 
-
 ## 2. Versión de escritorio y responsive
 
 _Enviado: 2026-10-17T02:48:21.691Z (UTC)_
@@ -85,8 +84,6 @@ FASE 2 (movimiento, solo cuando yo lo apruebe)
 
 AL TERMINAR CADA FASE: lista de archivos cambiados y `git diff --stat` confirmando que no se tocó src/lib, src/server, src/app/api ni db/.
 ```
-
-
 
 ## 4. Ajustes: Resumen, transiciones, sin scroll, nombres y QR
 
