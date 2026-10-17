@@ -64,16 +64,38 @@ chmod 600 /opt/trivo/.env
 
 The Open Payments private key goes in `/opt/trivo/open_payments.key` (`chmod 644`, inside `/opt/trivo` with `chmod 700`); `scripts/deploy.sh` mounts it read-only at `/run/secrets/open_payments.key`. See [OPEN-PAYMENTS.md](OPEN-PAYMENTS.md).
 
-`/opt/trivo/.env` holds plain `KEY=value` lines (docker `--env-file` does not strip quotes):
+`/opt/trivo/.env` holds plain `KEY=value` lines (docker `--env-file` does not strip quotes). There is **no** `DATABASE_URL`: the deploy creates the database itself.
 
 ```
 COBROS_STORE=postgres
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/postgres
 COBROS_RAIL=open-payments
+APP_BASE_URL=https://your-domain.example
 CONFIRMACION_SECRETO=<64 hex characters, see docs/OPEN-PAYMENTS.md>
+VENDEDOR_PIN=<at least 8 characters: the seller's password to create and see charges>
+OPEN_PAYMENTS_CLIENT_WALLET_URL=https://ilp.interledger-test.dev/your-wallet
+OPEN_PAYMENTS_KEY_ID=<key id registered in the wallet>
+OPEN_PAYMENTS_PRIVATE_KEY_PATH=/run/secrets/open_payments.key
 ```
 
-The app listens on port **9028**. Open it in the firewall only if you serve it directly; behind a reverse proxy, keep it on localhost.
+### What a deploy does on the server
+
+`scripts/deploy.sh` runs these steps in order and stops at the first one that fails:
+
+1. Creates the Docker network `trivo`.
+2. Creates the Postgres container `trivo-db` **once** (volume `trivo-pgdata`, no published port, reachable only as `db` inside the network). Its password is generated into `/opt/trivo/postgres_password` (`chmod 600`); nobody chooses or pastes it. A deploy never replaces this container, so data survives.
+3. Applies Prisma migrations with the published `migrate` image. If they fail, the running app is left untouched.
+4. Replaces the app container and rolls back to the previous image if it is not healthy.
+5. If `APP_BASE_URL` is `https://…`, starts or reloads the Caddy proxy `trivo-proxy` on ports 80 and 443, which gets and renews the certificate by itself. This needs a DNS **A record** for that domain pointing at the server, with ports 80 and 443 free. If the proxy fails, the deploy still succeeds and prints a warning.
+
+The app also stays reachable on port **9028** (plain HTTP). Use the HTTPS domain for payers.
+
+No domain yet? Set `APP_BASE_URL=http://<server-ip>:9028`. The deploy then skips the proxy and the app is served over plain HTTP: fine for a demo, but links and tokens travel unencrypted, so move to a domain with HTTPS before real use.
+
+Back up the database from time to time:
+
+```bash
+docker exec trivo-db pg_dump -U trivo trivo > trivo-$(date +%F).sql
+```
 
 ## Images in GitHub Packages
 

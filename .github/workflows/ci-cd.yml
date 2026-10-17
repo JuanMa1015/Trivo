@@ -94,6 +94,7 @@ jobs:
       packages: write
     outputs:
       image: ${{ steps.ref.outputs.image }}
+      migrate_image: ${{ steps.ref.outputs.migrate_image }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -123,9 +124,20 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Immutable reference (image@digest)
+      # The deploy applies Prisma migrations before starting the app, so it needs the migrate stage.
+      - id: push-migrate
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: migrate
+          push: true
+          tags: ${{ steps.name.outputs.image }}:migrate-${{ github.sha }}
+          cache-from: type=gha
+      - name: Immutable references (image@digest)
         id: ref
-        run: echo "image=${{ steps.name.outputs.image }}@${{ steps.push.outputs.digest }}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image=${{ steps.name.outputs.image }}@${{ steps.push.outputs.digest }}" >> "$GITHUB_OUTPUT"
+          echo "migrate_image=${{ steps.name.outputs.image }}@${{ steps.push-migrate.outputs.digest }}" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy to production
@@ -160,7 +172,8 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           IMAGE: ${{ needs.publish.outputs.image }}
+          MIGRATE_IMAGE: ${{ needs.publish.outputs.migrate_image }}
         run: |
           ssh -i ~/.ssh/id_deploy -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" "IMAGE='$IMAGE' bash -s" < scripts/deploy.sh
+            "$DEPLOY_USER@$DEPLOY_HOST" "IMAGE='$IMAGE' MIGRATE_IMAGE='$MIGRATE_IMAGE' bash -s" < scripts/deploy.sh
