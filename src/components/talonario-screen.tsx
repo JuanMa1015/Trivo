@@ -48,7 +48,7 @@ export function TalonarioScreen() {
       setDigitos("");
       setConcepto("");
       setCreando(false);
-      router.push(`/cobro/${cobro.numero}`);
+      router.push(`/cobro/${cobro.id}`);
     } catch {
       setError(true);
       setCreando(false);
@@ -153,9 +153,9 @@ export function TalonarioScreen() {
         ) : (
           <ul className="recibo mt-3 overflow-hidden">
             {cobros.map((c) => (
-              <li key={c.numero} className="talon">
+              <li key={c.id} className="talon">
                 <Link
-                  href={`/cobro/${c.numero}`}
+                  href={`/cobro/${c.id}`}
                   className="flex min-h-16 items-center gap-3 px-4 py-3"
                 >
                   <span className="w-12 shrink-0 border-r-2 border-dashed border-secondary/20 pr-3 text-sm font-bold text-secondary/70">

@@ -30,7 +30,7 @@ docker compose down                   # stop (add -v to wipe the database)
 
 The database is also reachable from your machine on port **5433** (`DB_PORT` changes it), e.g. `DATABASE_URL=postgresql://trivo:trivo@localhost:5433/trivo`. If Docker says the port is not available, pick another one: `DB_PORT=5434 docker compose up -d db`.
 
-Real Open Payments in the same stack (needs `.env` with the wallet, keyId and `CONFIRMACION_SECRETO`, and `./private.key`):
+Real Open Payments in the same stack (needs `.env` with the wallet, keyId, `CONFIRMACION_SECRETO` and `VENDEDOR_PIN`, and `./private.key`):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.openpayments.yml up --build -d app

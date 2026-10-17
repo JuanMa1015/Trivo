@@ -24,10 +24,10 @@ import { codigoAgrupado, horaDe } from "@/lib/talonario";
 import { useAhora, usePolling } from "@/lib/use-polling";
 
 function registrarEvento(
-  numero: number,
+  id: string,
   tipo: "compartido_whatsapp" | "link_copiado",
 ) {
-  void fetch(`/api/cobros/${numero}/eventos`, {
+  void fetch(`/api/cobros/${id}/eventos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tipo }),
@@ -62,13 +62,13 @@ function avisarCobro() {
   }
 }
 
-export function CobroScreen({ numero }: { numero: number }) {
+export function CobroScreen({ id }: { id: string }) {
   const router = useRouter();
   // Cada segundo: el vendedor debe ver el dinero llegar casi al instante.
   const { data, estado } = usePolling<{
     cobro: Cobro;
     modo: "demo" | "open-payments";
-  }>(`/api/cobros/${numero}`, 1000);
+  }>(`/api/cobros/${id}`, 1000);
   const ahora = useAhora();
   const [copiado, setCopiado] = useState(false);
   const [inicioSimulacion, setInicioSimulacion] = useState<number | null>(null);
@@ -135,7 +135,7 @@ export function CobroScreen({ numero }: { numero: number }) {
 
   async function simular() {
     setInicioSimulacion(Date.now());
-    const r = await fetch(`/api/cobros/${numero}/simular-pago`, {
+    const r = await fetch(`/api/cobros/${id}/simular-pago`, {
       method: "POST",
     });
     if (!r.ok) setInicioSimulacion(null);
@@ -145,7 +145,7 @@ export function CobroScreen({ numero }: { numero: number }) {
     try {
       await navigator.clipboard.writeText(enlace);
       setCopiado(true);
-      registrarEvento(numero, "link_copiado");
+      registrarEvento(id, "link_copiado");
       setTimeout(() => setCopiado(false), 2000);
     } catch {
       // Clipboard blocked: the code stays visible to read aloud.
@@ -278,7 +278,7 @@ export function CobroScreen({ numero }: { numero: number }) {
             href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => registrarEvento(numero, "compartido_whatsapp")}
+            onClick={() => registrarEvento(id, "compartido_whatsapp")}
             className="flex h-16 items-center justify-center gap-3 rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"
           >
             <IconSend width={24} height={24} /> Enviar por WhatsApp
