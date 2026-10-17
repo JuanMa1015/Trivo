@@ -257,3 +257,53 @@ Componente de plus, fuera del flujo principal (PRODUCT.md lo lista como topes tr
 - **Don't** usar sombras duras desplazadas ni de color; la única sombra es la de hoja de papel.
 - **Don't** pintar las muescas con un color distinto al del fondo.
 - **Don't** usar lenguaje de banco o de DIAN en el texto de pantalla (voz de tienda, de PRODUCT.md).
+
+## Escritorio (desde lg, 1024 px)
+
+Todo lo anterior describe el móvil, que no cambia por debajo de `lg`. Desde `lg` cada pantalla muestra una composición web aparte, con los mismos datos, textos y acciones que su versión móvil. Las piezas viven en `src/components/web/` (y `src/components/resumen/`, `src/components/cobro/`). Los tokens y estilos están en un solo bloque al final de `src/app/globals.css`.
+
+### Identidad
+
+- **Paleta**: la misma de la marca. Primario `#007EA7`, agua `#80CED7`, tinta `#1F1F1F` (los títulos usan `tinta`, un poco de primario sobre la tinta), fondo `#EDF4F6`, papel `#FBFDFD`, error `#B42318` solo para texto de error.
+- **Fuente**: Plus Jakarta Sans (alojada con la app por `next/font`), solo en escritorio.
+- **Marca**: la "T" de Trivo (`MarcaT`) en degradado de agua a primario; en el hero, marcas "T" blancas que flotan muy despacio.
+- **Formas**: tarjetas de 28 px de radio; botones y campos de 18 px; teclas de 16 px; chips y avatar en píldora.
+
+### Estructura de cada pantalla
+
+1. **Barra superior** (`NavComercio` / `NavPagador`): logo, secciones Cobrar · Talonario · Resumen con ícono (la activa sobre agua) e identidad del comercio (nombre e iniciales). El pagador ve logo y ES | EN.
+2. **Hero** (`HeroWeb`): degradado de agua, insignia de la sección, título, subtítulo, comercio y una tarjeta de cristal con la cifra principal (monto a cobrar, cobrado hoy, total de la semana, monto a pagar).
+3. **Contenido**: tarjetas claras con encabezado de baldosa (ícono + título + subtítulo). En Cobrar y el cobro, dos columnas 5/12 y 7/12 de la misma altura.
+
+### Pantallas
+
+| Ruta             | Escritorio                                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/`              | "Ingresa el monto": campo $ editable (mismas reglas del teclado), conceptos, teclado 3×4 y "Cobrar $X". A la derecha "Código de pago": visor del QR vacío y las ventajas de Open Payments. |
+| `/cobro/[n]`     | Misma barra, hero y columnas: se siente como la misma pantalla. "Cobro #0045" con el QR protagonista en su visor, el código y el estado; "Comprobante #0045" con sello cuando se cobra.    |
+| `/talonario`     | Lista de talones con perforación. Al elegir uno, la lista se encoge y el cobro entra a la derecha; se cierra con ✕, la fila o Esc. Vacío: invitación a cobrar.                             |
+| `/resumen`       | Semana por día, Hoy, Mejor día (destacado sobre agua), Cobros, Promedio y tips.                                                                                                            |
+| `/pagar`, `/p/…` | Hero con quién cobra y cuánto; una tarjeta centrada con el paso actual (cada paso entra desde la derecha).                                                                                 |
+
+### Ventajas de Open Payments (en la tarjeta "Código de pago")
+
+- **Directo a tu wallet**: el pago va de la wallet del cliente a la del comercio, sin intermediarios.
+- **El cliente lo aprueba**: el dinero solo se mueve cuando quien paga lo aprueba en su wallet.
+- **Cualquier moneda**: un turista paga en su moneda, ve la tasa antes y el comercio recibe pesos.
+
+### Sin scroll
+
+En ventanas de menos de 860 px de alto (laptops de 1366×768) el hero baja de 200 a 156 px, las separaciones de 24 a 16 px y las teclas de 48 a 40 px. Cobrar, el cobro, el Talonario y el Resumen caben sin scroll; la lista larga del talonario se desplaza dentro de su tarjeta. El QR crece con el alto disponible (`--qr`, 200 a 260 px).
+
+### Movimiento
+
+- **Entre secciones** (View Transitions): barra y hero quedan quietos; insignia, título, subtítulo y cifra del hero suben 8 px con crossfade (240 ms); el contenido hace crossfade.
+- Los nombres de transición van en CSS (`view-transition-name`), **no** en `<ViewTransition name>`: con `cacheComponents`, Next deja las rutas visitadas montadas pero ocultas (`<Activity>`), y dos componentes con el mismo nombre montados a la vez son un error. Los elementos ocultos no participan de una transición CSS, así no hay duplicados.
+- **Cobrar → cobro**: el teclado baja a 45 % de opacidad (320 ms) y el contenido del cobro entra escalonado cada 40 ms. Mientras la ruta llega, su `fallback` muestra la misma composición.
+- Teclas (escala 0,96), chips (crossfade de color 240 ms), sello (estampado con leve sobreimpulso, el único rebote), talonario (columnas del grid 320 ms y detalle desde la derecha) y pagador (cada paso desde la derecha).
+- `prefers-reduced-motion: reduce`: solo opacidad, 120 ms.
+
+### Rendimiento
+
+- Cada pantalla dibuja solo la composición que se ve (`SoloMovil` / `SoloEscritorio`): en el servidor salen las dos y el CSS oculta una; ya en el navegador se descarta la otra, así no se re-renderiza un árbol oculto cada segundo.
+- Sin `backdrop-filter` ni fondos fijos: las tarjetas son opacas y el fondo es plano, más barato de pintar y de capturar en las transiciones.
