@@ -71,7 +71,20 @@ describe("verificarHashInteraccion", () => {
       .update(
         `${datos.nonceCliente}\n${datos.nonceAs}\n${datos.interactRef}\n${grant}`,
       )
-      .digest("base64url");
+      .digest("base64");
+
+  it("acepta el hash real que devolvió la testnet (base64 con relleno)", () => {
+    expect(
+      verificarHashInteraccion({
+        nonceCliente: "008eb890-738d-449f-a82b-f6d200f44b3c",
+        nonceAs: "6D826C8183A7355E",
+        interactRef: "6e519da1-9f3f-449b-ae0c-c07d310b2aef",
+        authServerUrl:
+          "https://auth.interledger-test.dev/f537937b-7016-481b-b655-9f0d1014822c",
+        hash: "ONLLgVva2U7lPtifWGJhSQIe4bOlZhJx4C4PhqKphKU=",
+      }),
+    ).toBe(true);
+  });
 
   it("acepta el hash correcto, con o sin barra final en la URL del grant", () => {
     expect(

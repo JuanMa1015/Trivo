@@ -45,6 +45,19 @@ const cabeceras = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // El SDK de Open Payments lee sus especificaciones .yaml con path.resolve(__dirname, ...).
+  // Empaquetado, __dirname deja de ser real y falla: se carga desde node_modules.
+  serverExternalPackages: [
+    "@interledger/open-payments",
+    "@interledger/openapi",
+    "@interledger/http-signature-utils",
+  ],
+  // Los .yaml se leen en ejecución, así que hay que llevarlos explícitamente a la imagen.
+  outputFileTracingIncludes: {
+    "/api/**/*": [
+      "./node_modules/@interledger/open-payments/dist/openapi/specs/*.yaml",
+    ],
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

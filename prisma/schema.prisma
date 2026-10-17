@@ -17,6 +17,7 @@ enum EstadoCobro {
   procesando
   cobrado
   vencido
+  fallido
 
   @@map("estado_cobro")
 }
@@ -65,6 +66,8 @@ model Cobro {
   incomingPaymentUrl String? @map("incoming_payment_url")
   quoteUrl           String? @map("quote_url")
   outgoingPaymentUrl String? @map("outgoing_payment_url")
+  // Token del permiso del pagador, solo para consultar si su pago falló. Se borra al cerrar el cobro.
+  outgoingToken String? @map("outgoing_token")
 
   comercio Comercio      @relation(fields: [comercioId], references: [id])
   eventos  Evento[]

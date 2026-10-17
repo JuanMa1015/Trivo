@@ -1,0 +1,31 @@
+# Open Payments REAL sobre el stack local de Docker Desktop. Se suma al compose base:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.openpayments.yml up --build -d app
+#
+# Necesita, en .env: OPEN_PAYMENTS_CLIENT_WALLET_URL, OPEN_PAYMENTS_KEY_ID y
+# CONFIRMACION_SECRETO; y el archivo ./private.key junto a este compose.
+# Guía: docs/OPEN-PAYMENTS.md
+
+services:
+  app:
+    # Trae tu .env al contenedor; lo de `environment` de abajo manda sobre él.
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      COBROS_RAIL: open-payments
+      COBROS_STORE: postgres
+      # La base del contenedor, no la de Supabase que pueda estar en .env.
+      DATABASE_URL: postgresql://trivo:trivo@db:5432/trivo
+      # Para probar con otra persona: URL pública del túnel (ver docs/OPEN-PAYMENTS.md).
+      APP_BASE_URL: ${APP_BASE_URL_PUBLICA:-http://localhost:9028}
+      OPEN_PAYMENTS_PRIVATE_KEY_PATH: /run/secrets/open_payments.key
+    volumes:
+      # La llave entra de solo lectura. Si ./private.key no existe, falla en vez de
+      # crear una carpeta con ese nombre.
+      - type: bind
+        source: ./private.key
+        target: /run/secrets/open_payments.key
+        read_only: true
+        bind:
+          create_host_path: false

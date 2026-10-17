@@ -49,6 +49,8 @@ export function crearRepoMemoria(
   opciones: OpcionesRepo = { completarDemo: true, semilla: true },
 ): RepoCobros {
   const cobros = new Map<number, Cobro>();
+  // Aparte del Cobro para que nunca viaje por la API.
+  const tokensDePago = new Map<number, string>();
   let siguiente = 1;
 
   const iso = (ms: number) => new Date(ms).toISOString();
@@ -217,11 +219,12 @@ export function crearRepoMemoria(
       return { ok: true, estado: c.estado };
     },
 
-    async marcarProcesando(numero, outgoingPaymentUrl) {
+    async marcarProcesando(numero, outgoingPaymentUrl, tokenPago) {
       const c = porNumero(numero);
       if (!c || c.estado !== "esperando") return false;
       c.estado = "procesando";
       c.outgoingPaymentUrl = outgoingPaymentUrl;
+      if (tokenPago) tokensDePago.set(numero, tokenPago);
       registrarEn(c, "pago_enviado");
       return true;
     },
@@ -230,6 +233,7 @@ export function crearRepoMemoria(
       if (!c || (c.estado !== "esperando" && c.estado !== "procesando"))
         return false;
       c.estado = "cobrado";
+      tokensDePago.delete(numero);
       c.pagadoEn = iso(ahora());
       registrarEn(c, "cobrado", detalle);
       return true;
@@ -237,9 +241,13 @@ export function crearRepoMemoria(
     async marcarFallido(numero, detalle) {
       const c = porNumero(numero);
       if (!c || c.estado !== "procesando") return false;
-      c.estado = "vencido";
+      c.estado = "fallido";
+      tokensDePago.delete(numero);
       registrarEn(c, "pago_fallido", detalle);
       return true;
+    },
+    async tokenDePago(numero) {
+      return tokensDePago.get(numero);
     },
     async listarProcesando() {
       return [...cobros.values()]

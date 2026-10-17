@@ -50,6 +50,8 @@ function crearPuertoFalso(ahora: () => number) {
     recibeFalso: undefined as Monto | undefined,
     llegoElDinero: false,
     falloAlCompletar: false,
+    pagoSalienteFallido: false,
+    consultasSalientes: [] as string[],
     completados: [] as string[],
     consultas: 0,
   };
@@ -95,7 +97,12 @@ function crearPuertoFalso(ahora: () => number) {
       return {
         outgoingPaymentUrl:
           "https://ilp.interledger-test.dev/recursos/outgoing/1",
+        accessToken: "TOKEN-DEL-PAGO",
       };
+    },
+    async consultarPagoSaliente({ accessToken }) {
+      control.consultasSalientes.push(accessToken);
+      return { fallido: control.pagoSalienteFallido };
     },
     async consultarRecibido({ esperado }) {
       control.consultas += 1;
@@ -142,7 +149,7 @@ function montarReal() {
 const hashDe = (nonceCliente: string, interactRef: string) =>
   createHash("sha256")
     .update(`${nonceCliente}\nNONCE-AS\n${interactRef}\n${AUTH_PAGADOR}`)
-    .digest("base64url");
+    .digest("base64");
 
 /** Recorre cobro -> cotización -> consentimiento y devuelve lo necesario para el retorno. */
 async function llegarAlConsentimiento(m: ReturnType<typeof montarReal>) {
@@ -415,8 +422,46 @@ describe("servicio Open Payments: confirmar el dinero", () => {
     const cobro = await pagoEnviado(m);
     m.avanzar(PAGO_SIN_CONFIRMAR_MS + 2_000);
     const final = await m.servicio.obtener(cobro.numero);
-    expect(final?.estado).toBe("vencido");
+    expect(final?.estado).toBe("fallido");
     expect(final?.eventos.at(-1)?.tipo).toBe("pago_fallido");
+  });
+
+  it("si la wallet marca el pago como fallido, lo muestra enseguida y no espera 3 minutos", async () => {
+    const m = montarReal();
+    const cobro = await pagoEnviado(m);
+    expect(m.control.consultasSalientes).toEqual([]);
+
+    m.control.pagoSalienteFallido = true;
+    m.avanzar(2_000);
+    const final = await m.servicio.obtener(cobro.numero);
+    expect(final?.estado).toBe("fallido");
+    expect(final?.eventos.at(-1)).toMatchObject({
+      tipo: "pago_fallido",
+      detalle: "la wallet del pagador no completó el pago",
+    });
+    expect(m.control.consultasSalientes).toEqual(["TOKEN-DEL-PAGO"]);
+    // Cerrado el cobro, el token del pago se borra.
+    expect(await m.repo.tokenDePago(cobro.numero)).toBeUndefined();
+  });
+
+  it("si el dinero ya llegó no lo da por fallido aunque la wallet diga que falló", async () => {
+    const m = montarReal();
+    const cobro = await pagoEnviado(m);
+    m.control.pagoSalienteFallido = true;
+    m.control.llegoElDinero = true;
+    m.avanzar(2_000);
+    expect((await m.servicio.obtener(cobro.numero))?.estado).toBe("cobrado");
+    expect(await m.repo.tokenDePago(cobro.numero)).toBeUndefined();
+  });
+
+  it("el token del pago nunca sale en el cobro ni en la vista pública", async () => {
+    const m = montarReal();
+    const cobro = await pagoEnviado(m);
+    const visto = JSON.stringify([
+      await m.servicio.obtener(cobro.numero),
+      await m.servicio.verComoPagador(cobro.token),
+    ]);
+    expect(visto).not.toContain("TOKEN-DEL-PAGO");
   });
 
   it("no consulta la wallet más de una vez por segundo aunque varios sondeen", async () => {

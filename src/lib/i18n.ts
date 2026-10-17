@@ -27,6 +27,9 @@ export const textos = {
     yendoAyuda: "No cierres esta pantalla. Te avisamos cuando termine.",
     vencido: "Este cobro venció",
     vencidoAyuda: "Pídele al vendedor que cree uno nuevo.",
+    fallido: "Tu wallet no pudo completar el pago",
+    fallidoAyuda:
+      "Revisa que tengas saldo suficiente en tu wallet. No se cobró este pago: pídele al vendedor que cree un cobro nuevo e inténtalo de nuevo. Si ves el cargo en tu wallet, no repitas el pago y avísale.",
     exito: "Pago enviado",
     exitoAyuda: "El vendedor ya recibió su recibo.",
     confirmaNombre:
@@ -82,6 +85,9 @@ export const textos = {
     yendoAyuda: "Don't close this screen. We'll let you know when it's done.",
     vencido: "This charge has expired",
     vencidoAyuda: "Ask the seller to create a new one.",
+    fallido: "Your wallet could not complete the payment",
+    fallidoAyuda:
+      "Check that your wallet has enough balance. This payment was not completed: ask the seller to create a new charge and try again. If you see the charge in your wallet, do not pay again and tell the seller.",
     exito: "Payment sent",
     exitoAyuda: "The seller already got their receipt.",
     confirmaNombre:

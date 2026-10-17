@@ -130,6 +130,7 @@ export function CobroScreen({ numero }: { numero: number }) {
   const procesando = cobro.estado === "procesando";
   const esperando = cobro.estado === "esperando";
   const vencido = cobro.estado === "vencido";
+  const fallido = cobro.estado === "fallido";
   const restante = segundosRestantes(cobro.venceEn, ahora);
 
   async function simular() {
@@ -218,6 +219,13 @@ export function CobroScreen({ numero }: { numero: number }) {
                 Venció a las {horaDe(cobro.venceEn)}. Crea uno nuevo.
               </span>
             ) : null}
+            {fallido ? (
+              <span className="text-sm font-bold text-critico" role="alert">
+                La wallet de quien paga no pudo completar el pago, por ejemplo
+                por saldo insuficiente. No recibiste el dinero: crea un cobro
+                nuevo.
+              </span>
+            ) : null}
           </div>
 
           {pagador && !cobrado ? (
@@ -299,7 +307,7 @@ export function CobroScreen({ numero }: { numero: number }) {
         </div>
       ) : null}
 
-      {cobrado || vencido ? (
+      {cobrado || vencido || fallido ? (
         <Link
           href="/"
           className="flex h-16 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-white shadow-sm active:scale-[0.98]"

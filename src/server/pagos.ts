@@ -263,6 +263,21 @@ export function crearServicioOpenPayments({
           );
           continue;
         }
+        // La wallet del pagador avisa si su pago falló (por ejemplo, sin saldo).
+        const tokenPago = await repo.tokenDePago(cobro.numero);
+        if (tokenPago && cobro.outgoingPaymentUrl) {
+          const { fallido } = await puerto.consultarPagoSaliente({
+            outgoingPaymentUrl: cobro.outgoingPaymentUrl,
+            accessToken: tokenPago,
+          });
+          if (fallido) {
+            await repo.marcarFallido(
+              cobro.numero,
+              "la wallet del pagador no completó el pago",
+            );
+            continue;
+          }
+        }
         const enviado = cobro.eventos.findLast(
           (e) => e.tipo === "pago_enviado",
         );
@@ -485,19 +500,24 @@ export function crearServicioOpenPayments({
         return fallar("cotizacion_vencida", "el precio venció");
 
       try {
-        const { outgoingPaymentUrl } = await puerto.completarConsentimiento({
-          pagador,
-          cotizacion: {
-            quoteUrl: intento.quoteUrl,
-            debito: intento.debito,
-            recibe: intento.recibe,
-            venceEn: intento.venceEn,
-          },
-          continueUri: intento.continuacion.continueUri,
-          continueToken: intento.continuacion.continueToken,
-          interactRef,
-        });
-        await repo.marcarProcesando(cobro.numero, outgoingPaymentUrl);
+        const { outgoingPaymentUrl, accessToken } =
+          await puerto.completarConsentimiento({
+            pagador,
+            cotizacion: {
+              quoteUrl: intento.quoteUrl,
+              debito: intento.debito,
+              recibe: intento.recibe,
+              venceEn: intento.venceEn,
+            },
+            continueUri: intento.continuacion.continueUri,
+            continueToken: intento.continuacion.continueToken,
+            interactRef,
+          });
+        await repo.marcarProcesando(
+          cobro.numero,
+          outgoingPaymentUrl,
+          accessToken,
+        );
         return { token };
       } catch (error) {
         const codigoError =
