@@ -1,9 +1,8 @@
 "use client";
 
-import { EncabezadoMovil } from "@/components/encabezado-movil";
+import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useCobroEnVivo } from "@/components/cobro/use-cobro-en-vivo";
-import { TalonarioLista } from "@/components/talonario-lista";
 import Link from "next/link";
 import { IconDocumento, IconWallet } from "@/components/icons";
 import {
@@ -21,7 +20,6 @@ import type { CobroResumen } from "@/lib/cobros";
 import { horaDe, totalCobrado } from "@/lib/talonario";
 import { usePerfil } from "@/lib/use-perfil";
 import { usePolling } from "@/lib/use-polling";
-import { SoloMovil } from "@/components/web/vista";
 
 /** Tiempo de salida del detalle antes de que la lista vuelva a todo el ancho. */
 const SALIDA_MS = 240;
@@ -47,6 +45,7 @@ function DetalleCobro({
  * y el comprobante entra a la derecha. Por debajo de lg, la lista móvil de siempre.
  */
 export function TalonarioWebScreen() {
+  const router = useRouter();
   const { comercio } = usePerfil();
   const { data, estado } = usePolling<{ cobros: CobroResumen[] }>(
     "/api/cobros",
@@ -70,6 +69,11 @@ export function TalonarioWebScreen() {
   }
 
   function elegir(id: string) {
+    // Sin espacio para dos paneles (celular): el cobro se abre en su propia pantalla.
+    if (!window.matchMedia("(min-width: 64rem)").matches) {
+      router.push(`/cobro/${id}`);
+      return;
+    }
     if (id === elegido) return cerrar();
     setCambio(elegido !== null);
     setCerrando(false);
@@ -87,17 +91,6 @@ export function TalonarioWebScreen() {
 
   return (
     <>
-      <SoloMovil>
-        <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-10 pt-4 lg:hidden">
-          <EncabezadoMovil />
-          <TalonarioLista
-            cobros={cobros}
-            listo={listo}
-            conError={estado === "error"}
-          />
-        </main>
-      </SoloMovil>
-
       <PantallaWeb
         nav={<NavComercio seccion="talonario" />}
         hero={
@@ -122,10 +115,10 @@ export function TalonarioWebScreen() {
 
         <div className="maestro-detalle min-h-0 flex-1" data-abierto={abierto}>
           <section
-            className={`tarjeta-web @container flex max-h-[calc(100dvh-80px-var(--hero-alto)-var(--separacion)*3)] min-w-0 flex-col ${listo && cobros.length === 0 ? "self-stretch" : "self-start"}`}
+            className={`tarjeta-web @container flex min-w-0 flex-col lg:max-h-[calc(100dvh-80px-var(--hero-alto)-var(--separacion)*3)] ${listo && cobros.length === 0 ? "self-stretch" : "self-start"}`}
             aria-labelledby="titulo-talonario"
           >
-            <div className="px-6 pb-2 pt-6">
+            <div className="px-4 pb-2 pt-4 sm:px-6 sm:pt-6">
               <EncabezadoTarjeta
                 icono={<IconDocumento width={24} height={24} />}
                 titulo={<span id="titulo-talonario">Talonario de hoy</span>}
@@ -158,7 +151,7 @@ export function TalonarioWebScreen() {
                         onClick={() => elegir(c.id)}
                         aria-expanded={activo}
                         aria-controls="detalle-cobro"
-                        className={`grid min-h-18 w-full grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-5 gap-y-1 px-6 py-3 text-left text-web-sm transition-colors duration-200 @min-[640px]:grid-cols-[88px_minmax(0,1fr)_88px_160px_150px] ${
+                        className={`grid min-h-18 w-full grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-3 text-left sm:gap-x-5 sm:px-6 text-web-sm transition-colors duration-200 @min-[640px]:grid-cols-[88px_minmax(0,1fr)_88px_160px_150px] ${
                           activo ? "bg-aqua/20" : "hover:bg-aqua/8"
                         }`}
                       >
@@ -188,7 +181,7 @@ export function TalonarioWebScreen() {
 
           <div
             id="detalle-cobro"
-            className="min-w-0 max-h-[calc(100dvh-80px-var(--hero-alto)-var(--separacion)*3)] self-stretch"
+            className="min-w-0 self-stretch max-lg:hidden lg:max-h-[calc(100dvh-80px-var(--hero-alto)-var(--separacion)*3)]"
           >
             {elegido !== null ? (
               <div

@@ -30,7 +30,7 @@ export function HeroWeb({
   };
 }) {
   return (
-    <section className="hero-web flex items-center gap-8 px-12">
+    <section className="hero-web flex flex-col items-stretch gap-4 px-4 py-4 lg:flex-row lg:items-center lg:gap-8 lg:px-12 lg:py-0">
       <MarcasHero />
 
       <div className="relative flex min-w-0 flex-1 flex-col items-start gap-2">
@@ -38,25 +38,25 @@ export function HeroWeb({
           <Icono3D Icono={IconoInsignia} tamano={28} />
           {insignia}
         </span>
-        <h1 className="hero-titulo max-w-xl text-titulo font-extrabold text-tinta">
+        <h1 className="hero-titulo max-w-xl text-2xl font-extrabold text-tinta lg:text-titulo">
           {titulo}
         </h1>
         {subtitulo ? (
-          <p className="hero-subtitulo max-w-xl truncate text-web-sm text-tinta/70">
+          <p className="hero-subtitulo max-w-xl line-clamp-2 text-web-xs text-tinta/70 lg:truncate lg:text-web-sm">
             {subtitulo}
           </p>
         ) : null}
       </div>
 
       {comercio ? (
-        <p className="relative flex items-center gap-2 self-end pb-8 text-web-sm font-semibold text-tinta">
+        <p className="relative hidden items-center gap-2 self-end pb-8 text-web-sm font-semibold text-tinta lg:flex">
           <Icono3D Icono={IconUbicacion} tono="cielo" tamano={32} />
           {comercio}
         </p>
       ) : null}
 
       {tarjeta ? (
-        <div className="hero-tarjeta cristal-web relative flex w-80 shrink-0 items-end justify-between gap-4 px-6 py-5 2xl:w-96">
+        <div className="hero-tarjeta cristal-web relative flex w-full shrink-0 items-end justify-between gap-4 px-4 py-3 lg:w-80 lg:px-6 lg:py-5 2xl:w-96">
           {/* La cifra se achica según su largo: un monto grande nunca se corta. */}
           <div className="contenedor-cifra min-w-0 flex-1">
             {tarjeta.rotulo ? (

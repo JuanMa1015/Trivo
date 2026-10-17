@@ -1,4 +1,8 @@
 import { Suspense } from "react";
+import { IconEscudo } from "@/components/icons";
+import { PantallaWeb } from "@/components/web/contenedor";
+import { HeroWeb } from "@/components/web/hero-web";
+import { LogoTrivo } from "@/components/web/marca";
 import { connection } from "next/server";
 import {
   certificadoSchema,
@@ -37,56 +41,64 @@ async function Resultado({ searchParams }: PageProps<"/verificar">) {
       secretoConfirmacion(),
     );
 
+  const mostrar = valido && p.success ? p.data : null;
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-10 pt-6">
-      <span className="text-xl font-bold tracking-tight text-primary">
-        Trivo
-      </span>
-      {valido && p.success ? (
-        <section className="recibo flex flex-col gap-4 p-5" role="status">
-          <h1 className="text-3xl font-bold leading-tight text-primary">
-            Certificado auténtico
-          </h1>
-          <p className="text-secondary/70">
-            Estos datos coinciden con lo que Trivo firmó. Nadie los cambió.
+    <PantallaWeb
+      nav={
+        <header className="nav-web flex h-16 items-center px-4 lg:px-6">
+          <LogoTrivo />
+        </header>
+      }
+      hero={
+        <HeroWeb
+          insignia="Verificación"
+          IconoInsignia={IconEscudo}
+          titulo={mostrar ? "Certificado auténtico" : "No pudimos verificarlo"}
+          subtitulo={
+            mostrar
+              ? "Estos datos coinciden con lo que Trivo firmó. Nadie los cambió."
+              : "El código no coincide con los datos del enlace, o el enlace está incompleto."
+          }
+        />
+      }
+    >
+      <article
+        className="tarjeta-web mx-auto w-full max-w-140 p-5 text-web-sm sm:p-8"
+        role={mostrar ? "status" : "alert"}
+      >
+        {mostrar ? (
+          <>
+            <dl className="flex flex-col gap-4">
+              <Fila etiqueta="Comercio" valor={mostrar.n} />
+              {mostrar.u ? <Fila etiqueta="Titular" valor={mostrar.u} /> : null}
+              <Fila etiqueta="Periodo" valor={nombreDelMes(mostrar.p)} />
+              <Fila etiqueta="Cobros recibidos" valor={String(mostrar.k)} />
+              <Fila
+                etiqueta="Total cobrado"
+                valor={`$ ${mostrar.t.toLocaleString("es-CO")} COP`}
+              />
+              <Fila etiqueta="Emitido el" valor={mostrar.e} />
+            </dl>
+            <p className="mt-5 text-web-xs text-ink/60">
+              Resume los cobros recibidos con Trivo según sus registros. No es
+              un certificado contable ni sustituye declaraciones ante la DIAN.
+            </p>
+          </>
+        ) : (
+          <p className="text-ink/70">
+            Pide al comercio un certificado nuevo y no confíes en este.
           </p>
-          <dl className="flex flex-col gap-3">
-            <Fila etiqueta="Comercio" valor={p.data.n} />
-            {p.data.u ? <Fila etiqueta="Titular" valor={p.data.u} /> : null}
-            <Fila etiqueta="Periodo" valor={nombreDelMes(p.data.p)} />
-            <Fila etiqueta="Cobros recibidos" valor={String(p.data.k)} />
-            <Fila
-              etiqueta="Total cobrado"
-              valor={`$ ${p.data.t.toLocaleString("es-CO")} COP`}
-            />
-            <Fila etiqueta="Emitido el" valor={p.data.e} />
-          </dl>
-          <p className="text-sm text-secondary/70">
-            Resume los cobros recibidos con Trivo según sus registros. No es un
-            certificado contable ni sustituye declaraciones ante la DIAN.
-          </p>
-        </section>
-      ) : (
-        <section className="recibo flex flex-col gap-4 p-5" role="alert">
-          <h1 className="text-3xl font-bold leading-tight text-critico">
-            No pudimos verificarlo
-          </h1>
-          <p className="text-secondary/70">
-            El código no coincide con los datos del enlace, o el enlace está
-            incompleto. Pide al comercio un certificado nuevo y no confíes en
-            este.
-          </p>
-        </section>
-      )}
-    </main>
+        )}
+      </article>
+    </PantallaWeb>
   );
 }
 
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div>
-      <dt className="text-sm text-secondary/70">{etiqueta}</dt>
-      <dd className="break-words text-lg font-bold">{valor}</dd>
+      <dt className="text-web-xs text-ink/60">{etiqueta}</dt>
+      <dd className="break-words text-cuerpo font-bold text-tinta">{valor}</dd>
     </div>
   );
 }

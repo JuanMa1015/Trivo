@@ -43,7 +43,7 @@ elif [ "$(docker inspect --format '{{.State.Running}}' "$DB_NAME")" != "true" ];
   docker start "$DB_NAME" >/dev/null
 fi
 
-for _ in $(seq 1 30); do
+for _ in $(seq 1 45); do
   docker exec "$DB_NAME" pg_isready -U trivo -d trivo >/dev/null 2>&1 && break
   sleep 2
 done
@@ -74,7 +74,7 @@ start() {
 
 wait_healthy() {
   local status
-  for _ in $(seq 1 30); do
+  for _ in $(seq 1 45); do
     status="$(docker inspect --format '{{.State.Health.Status}}' "$NAME" 2>/dev/null || echo none)"
     [ "$status" = "healthy" ] && return 0
     [ "$status" = "unhealthy" ] && return 1
