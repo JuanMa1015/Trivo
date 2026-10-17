@@ -10,7 +10,7 @@ import { NavComercio, NavPagador } from "@/components/web/nav-web";
 import { PanelCobrarWeb } from "@/components/web/panel-cobrar";
 import { TarjetaCobroVacia } from "@/components/web/tarjeta-cobro";
 import { textos } from "@/lib/i18n";
-import { COMERCIO_EJEMPLO } from "@/lib/talonario";
+import { usePerfil } from "@/lib/use-perfil";
 
 /*
  * Mientras una ruta dinámica llega del servidor, Next muestra el `fallback` de su
@@ -21,11 +21,14 @@ import { COMERCIO_EJEMPLO } from "@/lib/talonario";
 
 /** /cobro/[id] cargando: hero de Cobrar, teclado atenuado y código de pago vacío. */
 export function CobroCargando() {
+  const { comercio } = usePerfil();
   const enCamino = montoAnunciado();
   return (
     <PantallaWeb
-      nav={<NavComercio seccion="cobrar" comercio={COMERCIO_EJEMPLO} />}
-      hero={heroCobrar(enCamino !== null ? pesosWeb(enCamino) : "…")}
+      nav={<NavComercio seccion="cobrar" />}
+      hero={heroCobrar(enCamino !== null ? pesosWeb(enCamino) : "…", {
+        comercio,
+      })}
     >
       <DosColumnasWeb>
         <PanelCobrarWeb monto={0} concepto="" inactivo />

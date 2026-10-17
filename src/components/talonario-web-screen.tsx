@@ -1,5 +1,6 @@
 "use client";
 
+import { EncabezadoMovil } from "@/components/encabezado-movil";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useCobroEnVivo } from "@/components/cobro/use-cobro-en-vivo";
 import { TalonarioLista } from "@/components/talonario-lista";
@@ -17,7 +18,8 @@ import { Icono3D } from "@/components/web/icono-3d";
 import { NavComercio } from "@/components/web/nav-web";
 import { TarjetaCobroWeb } from "@/components/web/tarjeta-cobro";
 import type { CobroResumen } from "@/lib/cobros";
-import { COMERCIO_EJEMPLO, horaDe, totalCobrado } from "@/lib/talonario";
+import { horaDe, totalCobrado } from "@/lib/talonario";
+import { usePerfil } from "@/lib/use-perfil";
 import { usePolling } from "@/lib/use-polling";
 import { SoloMovil } from "@/components/web/vista";
 
@@ -45,6 +47,7 @@ function DetalleCobro({
  * y el comprobante entra a la derecha. Por debajo de lg, la lista móvil de siempre.
  */
 export function TalonarioWebScreen() {
+  const { comercio } = usePerfil();
   const { data, estado } = usePolling<{ cobros: CobroResumen[] }>(
     "/api/cobros",
     3000,
@@ -86,14 +89,7 @@ export function TalonarioWebScreen() {
     <>
       <SoloMovil>
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-10 pt-4 lg:hidden">
-          <header className="flex items-center justify-between">
-            <span className="text-xl font-bold tracking-tight text-primary">
-              Trivo
-            </span>
-            <span className="text-sm text-secondary/70">
-              {COMERCIO_EJEMPLO}
-            </span>
-          </header>
+          <EncabezadoMovil />
           <TalonarioLista
             cobros={cobros}
             listo={listo}
@@ -103,14 +99,14 @@ export function TalonarioWebScreen() {
       </SoloMovil>
 
       <PantallaWeb
-        nav={<NavComercio seccion="talonario" comercio={COMERCIO_EJEMPLO} />}
+        nav={<NavComercio seccion="talonario" />}
         hero={
           <HeroWeb
             insignia="Talonario"
             IconoInsignia={IconDocumento}
             titulo="Talonario de hoy"
             subtitulo="Cada cobro queda registrado en tu historial."
-            comercio={COMERCIO_EJEMPLO}
+            comercio={comercio}
             tarjeta={{
               rotulo: "Cobrado",
               valor: pesosWeb(totalCobrado(cobros)),

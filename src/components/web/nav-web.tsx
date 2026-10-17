@@ -1,12 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import type { ComponentType, ReactNode, SVGProps } from "react";
-import { IconDocumento, IconGrafico, IconWallet } from "@/components/icons";
+import {
+  IconDocumento,
+  IconEscudo,
+  IconGrafico,
+  IconWallet,
+} from "@/components/icons";
 import { LangToggle } from "@/components/lang-toggle";
 import { Icono3D } from "@/components/web/icono-3d";
 import { LogoTrivo } from "@/components/web/marca";
 import type { Lang } from "@/lib/i18n";
+import { usePerfil } from "@/lib/use-perfil";
 
-export type SeccionWeb = "cobrar" | "talonario" | "resumen";
+export type SeccionWeb = "cobrar" | "talonario" | "resumen" | "impuestos";
 
 const SECCIONES: {
   id: SeccionWeb;
@@ -22,6 +30,12 @@ const SECCIONES: {
     Icono: IconDocumento,
   },
   { id: "resumen", href: "/resumen", texto: "Resumen", Icono: IconGrafico },
+  {
+    id: "impuestos",
+    href: "/impuestos",
+    texto: "Impuestos",
+    Icono: IconEscudo,
+  },
 ];
 
 /** Iniciales del comercio para su avatar ("Almacén El Centro" → "AC"). */
@@ -36,23 +50,28 @@ function iniciales(nombre: string): string {
 
 function Barra({ children }: { children: ReactNode }) {
   return (
-    <header className="nav-web flex h-16 items-center gap-10 px-6">
+    <header className="nav-web flex h-16 items-center gap-3 px-6 xl:gap-6">
       {children}
     </header>
   );
 }
 
 /** Barra del comercio: marca, secciones e identidad del comercio. */
-export function NavComercio({
-  seccion,
-  comercio,
-}: {
-  seccion: SeccionWeb;
-  comercio: string;
-}) {
+export function NavComercio({ seccion }: { seccion: SeccionWeb }) {
+  const { usuario, comercio } = usePerfil();
   return (
     <Barra>
-      <LogoTrivo />
+      <div className="flex items-center gap-4">
+        <LogoTrivo />
+        {usuario ? (
+          <span
+            className="max-w-28 truncate border-l xl:max-w-40 border-ink/15 pl-4 text-web-sm font-semibold text-tinta"
+            title={usuario}
+          >
+            {usuario}
+          </span>
+        ) : null}
+      </div>
       <nav aria-label="Secciones" className="flex-1">
         <ul className="flex gap-2">
           {SECCIONES.map(({ id, href, texto, Icono }) => {
@@ -71,7 +90,7 @@ export function NavComercio({
                   {activa ? (
                     <Icono3D Icono={Icono} tamano={30} />
                   ) : (
-                    <Icono width={20} height={20} />
+                    <Icono width={20} height={20} className="hidden xl:block" />
                   )}
                   {texto}
                 </Link>
@@ -80,10 +99,15 @@ export function NavComercio({
           })}
         </ul>
       </nav>
-      <div className="flex items-center gap-3">
-        <span className="text-web-sm font-semibold text-tinta">{comercio}</span>
+      <div className="flex min-w-0 items-center gap-3">
         <span
-          className="grid size-10 place-items-center rounded-full bg-primary text-web-xs font-bold text-white"
+          className="max-w-44 truncate text-web-sm font-semibold text-tinta xl:max-w-72"
+          title={comercio}
+        >
+          {comercio}
+        </span>
+        <span
+          className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-web-xs font-bold text-white"
           aria-hidden="true"
         >
           {iniciales(comercio)}

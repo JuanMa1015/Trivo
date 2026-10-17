@@ -25,8 +25,6 @@ export function codigoConfirmacion(
   return String(mac.readUInt32BE(0) % 10_000).padStart(4, "0");
 }
 
-let secretoDeProceso: string | undefined;
-
 /**
  * CONFIRMACION_SECRETO (mínimo 32 caracteres). En producción con Open Payments
  * real es obligatorio; en demo y desarrollo se usa uno aleatorio por proceso.
@@ -46,5 +44,7 @@ export function secretoConfirmacion(
       "Falta CONFIRMACION_SECRETO (obligatorio con Open Payments real)",
     );
   }
-  return (secretoDeProceso ??= randomBytes(32).toString("hex"));
+  // En globalThis: las rutas y las páginas pueden cargar este módulo por separado y deben compartir el secreto.
+  const global = globalThis as unknown as { __trivoSecreto?: string };
+  return (global.__trivoSecreto ??= randomBytes(32).toString("hex"));
 }

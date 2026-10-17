@@ -65,6 +65,13 @@ export type Cobro = {
   eventos: Evento[];
 };
 
+/** Quién paga, según la wallet que declaró al pedir precio o aprobar. */
+export function pagadorDe(cobro: Pick<Cobro, "eventos">): string | undefined {
+  return cobro.eventos.findLast(
+    (e) => e.tipo === "cotizado" || e.tipo === "consentimiento_iniciado",
+  )?.detalle;
+}
+
 /** El talonario no necesita la trazabilidad de cada cobro. */
 export type CobroResumen = Omit<Cobro, "eventos">;
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { EncabezadoMovil } from "@/components/encabezado-movil";
 import {
   useEffect,
   useState,
@@ -32,7 +33,8 @@ import { HeroWeb } from "@/components/web/hero-web";
 import { Icono3D, type Tono3D } from "@/components/web/icono-3d";
 import { NavComercio } from "@/components/web/nav-web";
 import type { CobroResumen } from "@/lib/cobros";
-import { COMERCIO_EJEMPLO } from "@/lib/talonario";
+import { hoyEnColombia, mesAnterior, nombreDelPeriodo } from "@/lib/impuestos";
+import { usePerfil } from "@/lib/use-perfil";
 import { useAhora, usePolling } from "@/lib/use-polling";
 import { SoloMovil } from "@/components/web/vista";
 
@@ -53,6 +55,7 @@ export function ResumenScreen() {
     3000,
   );
   const ahora = useAhora(60_000);
+  const { comercio } = usePerfil();
   const cobros = data?.cobros ?? [];
   const listo = data !== null;
   const r = calcularResumen(cobros, new Date(ahora));
@@ -74,30 +77,24 @@ export function ResumenScreen() {
     <>
       <SoloMovil>
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-10 pt-4 font-[family-name:var(--font-web)] lg:hidden">
-          <header className="flex items-center justify-between">
-            <span className="text-xl font-bold tracking-tight text-primary">
-              Trivo
-            </span>
-            <span className="text-sm text-secondary/70">
-              {COMERCIO_EJEMPLO}
-            </span>
-          </header>
+          <EncabezadoMovil />
           {aviso}
           <Semana r={r} listo={listo} cifra={cifra} />
           <Datos r={r} cifra={cifra} />
+          <Certificado ahora={ahora} />
           <Tips />
         </main>
       </SoloMovil>
 
       <PantallaWeb
-        nav={<NavComercio seccion="resumen" comercio={COMERCIO_EJEMPLO} />}
+        nav={<NavComercio seccion="resumen" />}
         hero={
           <HeroWeb
             insignia="Resumen"
             IconoInsignia={IconGrafico}
             titulo="Así va tu semana"
             subtitulo="Cada cobro suma a tu historial de ventas."
-            comercio={COMERCIO_EJEMPLO}
+            comercio={comercio}
             tarjeta={{
               rotulo: "Esta semana",
               valor: cifra(pesosWeb(r.semana.total)),
@@ -109,6 +106,7 @@ export function ResumenScreen() {
         <DosColumnasWeb>
           <div className="flex min-h-0 flex-col gap-(--separacion)">
             <Semana r={r} listo={listo} cifra={cifra} />
+            <Certificado ahora={ahora} />
             <Tips />
           </div>
           <Datos r={r} cifra={cifra} />
@@ -330,6 +328,45 @@ function Tips() {
           </button>
         ))}
       </div>
+    </section>
+  );
+}
+
+/** Certificado de ventas de un mes, con código y QR para que otro lo verifique. */
+function Certificado({ ahora }: { ahora: number }) {
+  const actual = hoyEnColombia(ahora).slice(0, 7);
+  const meses = Array.from({ length: 6 }, (_, i) => mesAnterior(actual, i));
+  const [mes, setMes] = useState(actual);
+
+  return (
+    <section className="tarjeta-web web-escalonado flex flex-col gap-4 p-6">
+      <EncabezadoTarjeta
+        icono={<IconDocumento width={24} height={24} />}
+        titulo="Certificado de ventas"
+        subtitulo="Una prueba de tus ingresos que cualquiera puede verificar"
+      />
+      <label className="flex flex-col gap-2 text-web-sm">
+        <span className="font-bold">Mes</span>
+        <select
+          value={mes}
+          onChange={(e) => setMes(e.target.value)}
+          className="campo-web"
+        >
+          {meses.map((m) => (
+            <option key={m} value={m}>
+              {nombreDelPeriodo(m)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <a href={`/api/certificado?mes=${mes}`} download className="boton-web">
+        Descargar certificado (PDF)
+      </a>
+      <p className="text-web-xs text-ink/60">
+        Resume lo cobrado con Trivo ese mes y lleva un código y un QR: quien lo
+        reciba comprueba en línea que nadie cambió las cifras. No es un
+        certificado contable.
+      </p>
     </section>
   );
 }

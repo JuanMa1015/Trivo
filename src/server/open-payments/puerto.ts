@@ -41,6 +41,8 @@ export type PuertoOpenPayments = {
     receptora: DatosWallet;
     monto: Monto;
     venceEn: Date;
+    /** Texto que verán la wallet del vendedor y, si lo muestra, la del pagador. Verificado en la testnet. */
+    descripcion?: string;
   }): Promise<{ incomingPaymentUrl: string }>;
 
   /** Pasos 3 y 4: cuánto costará pagar ese incoming payment desde la wallet del pagador. */

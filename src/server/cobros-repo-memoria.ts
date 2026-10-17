@@ -7,6 +7,8 @@ import {
   type CobroResumen,
   type TipoEvento,
 } from "@/lib/cobros";
+import { limitesDelAnio } from "@/lib/impuestos";
+import { LIMITE_COBROS_SIN_REGISTRO } from "@/lib/perfil";
 import { COMERCIO_EJEMPLO } from "@/lib/talonario";
 import { nuevoCodigo, nuevoToken } from "./confirmacion";
 import type {
@@ -52,6 +54,11 @@ export function crearRepoMemoria(
   // Aparte del Cobro para que nunca viaje por la API.
   const tokensDePago = new Map<number, string>();
   let siguiente = 1;
+  // La cuenta del comercio y cuántos cobros crea el usuario (los de ejemplo no cuentan).
+  const cuenta: { usuario?: string; comercio: string } = {
+    comercio: COMERCIO_EJEMPLO,
+  };
+  let creadosPorElUsuario = 0;
 
   const iso = (ms: number) => new Date(ms).toISOString();
 
@@ -108,7 +115,7 @@ export function crearRepoMemoria(
       numero: siguiente++,
       codigo: codigoLibre(),
       token: nuevoToken(),
-      comercio: COMERCIO_EJEMPLO,
+      comercio: cuenta.comercio,
       monto,
       concepto,
       estado: "esperando",
@@ -170,6 +177,7 @@ export function crearRepoMemoria(
 
   return {
     async crear(monto, concepto, extra) {
+      creadosPorElUsuario += 1;
       return nuevo(monto, concepto, extra);
     },
     async listar() {
@@ -248,6 +256,47 @@ export function crearRepoMemoria(
     },
     async tokenDePago(numero) {
       return tokensDePago.get(numero);
+    },
+    async totalCobradoDelAnio(anio) {
+      const { desde, hasta } = limitesDelAnio(anio);
+      return [...cobros.values()]
+        .filter(
+          (c) =>
+            c.estado === "cobrado" &&
+            c.pagadoEn !== undefined &&
+            Date.parse(c.pagadoEn) >= desde &&
+            Date.parse(c.pagadoEn) < hasta,
+        )
+        .reduce((suma, c) => suma + c.monto, 0);
+    },
+    async resumenCobrado(desde, hasta) {
+      const dentro = [...cobros.values()].filter(
+        (c) =>
+          c.estado === "cobrado" &&
+          c.pagadoEn !== undefined &&
+          Date.parse(c.pagadoEn) >= desde &&
+          Date.parse(c.pagadoEn) < hasta,
+      );
+      return {
+        total: dentro.reduce((suma, c) => suma + c.monto, 0),
+        cobros: dentro.length,
+      };
+    },
+    async perfil() {
+      return {
+        registrado: cuenta.usuario !== undefined,
+        ...(cuenta.usuario ? { usuario: cuenta.usuario } : {}),
+        comercio: cuenta.comercio,
+        cobrosCreados: creadosPorElUsuario,
+        limite: LIMITE_COBROS_SIN_REGISTRO,
+      };
+    },
+    async registrarPerfil({ usuario, comercio }) {
+      if (cuenta.usuario !== undefined) return false;
+      cuenta.usuario = usuario;
+      cuenta.comercio = comercio;
+      for (const c of cobros.values()) c.comercio = comercio;
+      return true;
     },
     async listarProcesando() {
       return [...cobros.values()]

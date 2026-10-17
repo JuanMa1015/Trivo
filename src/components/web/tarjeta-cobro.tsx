@@ -169,30 +169,7 @@ export function TarjetaCobroWeb({
           }
           acciones={
             <>
-              {copiado ? (
-                <span
-                  role="status"
-                  className="web-aparecer text-web-xs text-ink/60"
-                >
-                  Link copiado
-                </span>
-              ) : (
-                <TrazabilidadWeb eventos={cobro.eventos} />
-              )}
-              {esperando ? (
-                <button
-                  type="button"
-                  onClick={copiar}
-                  aria-label="Copiar link de pago"
-                  className="boton-circular"
-                >
-                  {copiado ? (
-                    <IconCheck width={20} height={20} />
-                  ) : (
-                    <IconCopy width={20} height={20} />
-                  )}
-                </button>
-              ) : null}
+              <TrazabilidadWeb eventos={cobro.eventos} />
               {cerrar}
             </>
           }
@@ -266,8 +243,14 @@ export function TarjetaCobroWeb({
                   <Sello texto="Cobrado" />
                 </div>
                 <p className="text-web-sm text-ink/60">
-                  Se sumó a tu historial. Factura generada (demo).
+                  Se sumó a tu historial. Descarga tu comprobante abajo.
                 </p>
+                {pagador ? (
+                  <p className="text-web-sm text-ink/60">
+                    Pagó:{" "}
+                    <strong className="break-all text-tinta">{pagador}</strong>
+                  </p>
+                ) : null}
               </div>
               {cobro.confirmacion ? (
                 <div className="flex flex-col gap-2 rounded-3xl bg-aqua/12 p-6">
@@ -326,26 +309,57 @@ export function TarjetaCobroWeb({
           </dl>
 
           {esperando ? (
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(mensajeDeCobro(cobro))}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => registrarEvento(cobro.id, "compartido_whatsapp")}
-                className="boton-web flex-1"
+                className="boton-web min-w-52 flex-1"
               >
                 <IconSend width={20} height={20} />
                 Enviar por WhatsApp
               </a>
+              <button
+                type="button"
+                onClick={copiar}
+                aria-live="polite"
+                className="boton-web-borde min-w-52 flex-1"
+              >
+                {copiado ? (
+                  <IconCheck width={20} height={20} />
+                ) : (
+                  <IconCopy width={20} height={20} />
+                )}
+                {copiado ? "¡Link copiado!" : "Copiar link de pago"}
+              </button>
               {modo === "demo" ? (
                 <button
                   type="button"
                   onClick={simular}
-                  className="boton-web-borde flex-1"
+                  className="boton-web-borde min-w-52 flex-1"
                 >
                   Simular que ya pagó (demo)
                 </button>
               ) : null}
+            </div>
+          ) : null}
+          {cobrado ? (
+            <div className="flex flex-wrap gap-3">
+              <a
+                href={`/api/cobros/${cobro.id}/comprobante?formato=a4`}
+                download
+                className="boton-web-borde min-w-52 flex-1"
+              >
+                Descargar comprobante (PDF)
+              </a>
+              <a
+                href={`/api/cobros/${cobro.id}/comprobante?formato=pos`}
+                download
+                className="boton-web-borde min-w-52 flex-1"
+              >
+                Ticket para impresora POS
+              </a>
             </div>
           ) : null}
           {cobrado || vencido || fallido ? (

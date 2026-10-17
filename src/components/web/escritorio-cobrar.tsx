@@ -14,6 +14,7 @@ import { NavComercio } from "@/components/web/nav-web";
 import { PanelCobrarWeb } from "@/components/web/panel-cobrar";
 import { TarjetaCobroVacia } from "@/components/web/tarjeta-cobro";
 import { COMERCIO_EJEMPLO } from "@/lib/talonario";
+import { usePerfil } from "@/lib/use-perfil";
 
 /** Hero de la sección Cobrar (lo comparten Cobrar y el cobro, para que se sienta una sola pantalla). */
 export function heroCobrar(
@@ -62,6 +63,7 @@ export function EscritorioCobrar({
   onCobrar: () => void;
 }) {
   const campo = useRef<HTMLInputElement>(null);
+  const { comercio } = usePerfil();
   // Al cobrar, la pantalla limpia el teclado antes de navegar: el hero conserva
   // el monto enviado para que la transición al cobro no pase por $0.
   const [enviado, setEnviado] = useState<number | null>(null);
@@ -79,8 +81,9 @@ export function EscritorioCobrar({
 
   return (
     <PantallaWeb
-      nav={<NavComercio seccion="cobrar" comercio={COMERCIO_EJEMPLO} />}
+      nav={<NavComercio seccion="cobrar" />}
       hero={heroCobrar(pesosWeb(montoHero), {
+        comercio,
         enVivo: true,
         accion: (
           <button

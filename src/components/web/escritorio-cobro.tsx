@@ -10,7 +10,7 @@ import { montoAnunciado, olvidarMonto } from "@/components/web/monto-en-camino";
 import { NavComercio } from "@/components/web/nav-web";
 import { PanelCobrarWeb } from "@/components/web/panel-cobrar";
 import { TarjetaCobroWeb } from "@/components/web/tarjeta-cobro";
-import { COMERCIO_EJEMPLO } from "@/lib/talonario";
+import { usePerfil } from "@/lib/use-perfil";
 
 /**
  * El cobro en escritorio: misma barra, hero y columnas que Cobrar, para que se
@@ -25,6 +25,7 @@ export function EscritorioCobro({
   noEncontrado: boolean;
 }) {
   const { cobro } = vivo;
+  const { comercio } = usePerfil();
 
   // Cuando llega el cobro real, el monto de la transición ya no hace falta.
   useEffect(() => {
@@ -40,8 +41,8 @@ export function EscritorioCobro({
 
   return (
     <PantallaWeb
-      nav={<NavComercio seccion="cobrar" comercio={COMERCIO_EJEMPLO} />}
-      hero={heroCobrar(monto, { comercio: cobro?.comercio })}
+      nav={<NavComercio seccion="cobrar" />}
+      hero={heroCobrar(monto, { comercio })}
     >
       <DosColumnasWeb>
         <PanelCobrarWeb monto={0} concepto="" inactivo />
