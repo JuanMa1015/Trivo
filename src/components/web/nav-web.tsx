@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { IconDocumento, IconGrafico, IconWallet } from "@/components/icons";
 import { LangToggle } from "@/components/lang-toggle";
+import { Icono3D } from "@/components/web/icono-3d";
 import { LogoTrivo } from "@/components/web/marca";
 import type { Lang } from "@/lib/i18n";
 
@@ -61,13 +62,17 @@ export function NavComercio({
                 <Link
                   href={href}
                   aria-current={activa ? "page" : undefined}
-                  className={`flex h-11 items-center gap-2 rounded-full px-5 text-web-sm transition-colors duration-200 ${
+                  className={`flex h-11 items-center gap-2 rounded-full text-web-sm transition-colors duration-200 ${
                     activa
-                      ? "bg-aqua/30 font-bold text-primary"
-                      : "text-ink/60 hover:bg-aqua/10 hover:text-tinta"
+                      ? "bg-aqua/30 pl-1.5 pr-5 font-bold text-primary"
+                      : "px-5 text-ink/60 hover:bg-aqua/10 hover:text-tinta"
                   }`}
                 >
-                  <Icono width={20} height={20} />
+                  {activa ? (
+                    <Icono3D Icono={Icono} tamano={30} />
+                  ) : (
+                    <Icono width={20} height={20} />
+                  )}
                   {texto}
                 </Link>
               </li>

@@ -291,6 +291,24 @@ Todo lo anterior describe el móvil, que no cambia por debajo de `lg`. Desde `lg
 - **El cliente lo aprueba**: el dinero solo se mueve cuando quien paga lo aprueba en su wallet.
 - **Cualquier moneda**: un turista paga en su moneda, ve la tasa antes y el comercio recibe pesos.
 
+### Íconos glossy 3D
+
+`Icono3D` (y `.baldosa-web` en los encabezados de tarjeta) dibuja cada ícono en una baldosa con volumen: degradado radial, brillo de cristal arriba, sombra interna y sombra de color. Cuatro tonos de la paleta: `primario`, `cielo`, `agua` y `tinta`. Se usan en la sección activa de la barra, la insignia y el comercio del hero, los encabezados, las ventajas de Open Payments, los datos del Resumen, los tips y los estados vacíos. Son decorativos: el texto de al lado da el significado. Sin librerías ni imágenes.
+
+### Cobrar
+
+- **Monto del hero**: la cifra se achica según su largo (`.cifra-ajustable`, con `--caracteres`), así "$999.999.999" se ve completo, sin "…".
+- **Teclado**: ocupa todo el alto libre de su tarjeta; las teclas y el número crecen con la pantalla.
+- **Concepto "Otro"**: abre un campo en la misma fila para escribir el concepto (hasta 30 caracteres, el límite del servidor); ✕ vuelve a los conceptos fijos.
+
+### Resumen
+
+Los tips pasan solos cada 6 s, con una barra que se llena hasta el siguiente; se pausan con el mouse o el foco encima y los puntos permiten elegir uno.
+
+### Ancho
+
+El contenedor de escritorio llega a 1680 px (antes 1440), con más margen lateral desde 2xl. El QR crece hasta 340 px en pantallas altas.
+
 ### Sin scroll
 
 En ventanas de menos de 860 px de alto (laptops de 1366×768) el hero baja de 200 a 156 px, las separaciones de 24 a 16 px y las teclas de 48 a 40 px. Cobrar, el cobro, el Talonario y el Resumen caben sin scroll; la lista larga del talonario se desplaza dentro de su tarjeta. El QR crece con el alto disponible (`--qr`, 200 a 260 px).

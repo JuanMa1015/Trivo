@@ -17,7 +17,7 @@ export function PantallaWeb({
 }) {
   return (
     <SoloEscritorio>
-      <div className="mx-auto hidden w-full max-w-360 flex-1 flex-col gap-(--separacion) px-8 pb-(--separacion) pt-4 text-ink lg:flex">
+      <div className="mx-auto hidden w-full max-w-420 flex-1 flex-col gap-(--separacion) px-8 2xl:px-12 pb-(--separacion) pt-4 text-ink lg:flex">
         {nav}
         {hero}
         <ViewTransition
