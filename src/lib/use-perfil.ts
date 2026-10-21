@@ -16,5 +16,7 @@ export function usePerfil() {
     registrado: data?.registrado ?? false,
     restantes: data ? cobrosRestantes(data) : null,
     cargado: data !== null,
+    /** Desde cuándo existe el comercio (para no ofrecer certificados de antes). */
+    creadoEn: data?.creadoEn,
   };
 }

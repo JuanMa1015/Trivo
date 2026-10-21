@@ -50,6 +50,8 @@ type ComercioMem = {
   passwordHash?: string;
   wallet?: string;
   ultimoNumero: number;
+  /** Cuándo empezó el comercio en Trivo: antes no hay ventas que certificar. */
+  creadoEn: string;
 };
 
 /**
@@ -271,7 +273,12 @@ export function crearRepoMemoria(
 
     async crearInvitado() {
       const id = randomUUID();
-      comercios.set(id, { id, nombre: COMERCIO_INVITADO, ultimoNumero: 0 });
+      comercios.set(id, {
+        id,
+        nombre: COMERCIO_INVITADO,
+        ultimoNumero: 0,
+        creadoEn: iso(ahora()),
+      });
       return id;
     },
     async perfil(comercioId) {
@@ -284,6 +291,7 @@ export function crearRepoMemoria(
         ...(c.wallet ? { wallet: c.wallet } : {}),
         cobrosCreados: c.ultimoNumero,
         limite: LIMITE_COBROS_SIN_REGISTRO,
+        creadoEn: c.creadoEn,
       };
     },
     async registrarCuenta({
@@ -298,7 +306,12 @@ export function crearRepoMemoria(
       if (comercioId && (!c || c.usuario !== undefined))
         return { ok: false, motivo: "ya_registrado" };
       if (!c) {
-        c = { id: randomUUID(), nombre: comercio, ultimoNumero: 0 };
+        c = {
+          id: randomUUID(),
+          nombre: comercio,
+          ultimoNumero: 0,
+          creadoEn: iso(ahora()),
+        };
         comercios.set(c.id, c);
       }
       Object.assign(c, { usuario, nombre: comercio, passwordHash, wallet });

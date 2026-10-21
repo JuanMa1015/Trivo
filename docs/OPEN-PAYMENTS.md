@@ -53,7 +53,7 @@ Cada vendedor tiene su comercio: usuario único (sin distinguir mayúsculas), co
 
 ### Certificado de ventas verificable
 
-`GET /api/certificado?mes=YYYY-MM` (solo vendedor) descarga un PDF con lo cobrado ese mes, un código `ABCD-EFGH-IJKL-MNOP` y un QR. El código es un HMAC de comercio, titular, mes, total, cantidad y fecha de emisión con el secreto del servidor, así que `/verificar` (pública) comprueba que nadie cambió una cifra, sin sesión ni consultas. El enlace lleva esos datos en la URL: quien tenga el PDF ya los tiene. No es un certificado contable ni sustituye la declaración ante la DIAN. En producción real usa `CONFIRMACION_SECRETO`; en demo el secreto es aleatorio por proceso y los certificados dejan de verificar al reiniciar.
+`GET /api/certificado?mes=YYYY-MM` (solo vendedor) descarga un PDF con lo cobrado ese mes, un código `ABCD-EFGH-IJKL-MNOP` y un QR. El código es un HMAC de comercio, titular, mes, total, cantidad y fecha de emisión con el secreto del servidor, así que `/verificar` (pública) comprueba que nadie cambió una cifra, sin sesión ni consultas. El enlace lleva esos datos en la URL: quien tenga el PDF ya los tiene. Solo acepta meses desde que el comercio empezó en Trivo (`creadoEn` del perfil) hasta el actual; los demás responden `400 datos_invalidos`. No es un certificado contable ni sustituye la declaración ante la DIAN. En producción real usa `CONFIRMACION_SECRETO`; en demo el secreto es aleatorio por proceso y los certificados dejan de verificar al reiniciar.
 
 ## Configuración
 

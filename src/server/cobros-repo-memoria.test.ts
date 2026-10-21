@@ -235,6 +235,12 @@ describe("cuentas y aislamiento entre comercios", () => {
     wallet: "https://wallet.test/rosa",
   });
 
+  it("sabe desde cuándo existe el comercio", async () => {
+    const t = Date.parse("2026-10-17T15:00:00.000Z");
+    const repo = atado(crearRepoMemoria(() => t, { completarDemo: false }));
+    expect((await repo.perfil())?.creadoEn).toBe(new Date(t).toISOString());
+  });
+
   it("un invitado empieza sin cuenta y cuenta sus cobros", async () => {
     const repo = await nuevo();
     expect(await repo.perfil()).toMatchObject({

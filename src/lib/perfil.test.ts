@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { accesoSchema, cobrosRestantes, registroSchema } from "./perfil";
+import {
+  accesoSchema,
+  cobrosRestantes,
+  mesDeInicio,
+  registroSchema,
+} from "./perfil";
 
 const valido = {
   usuario: "doña.rosa",
@@ -69,5 +74,17 @@ describe("cobrosRestantes", () => {
   it("cuenta hacia atrás sin pasar de cero", () => {
     expect(cobrosRestantes({ cobrosCreados: 2, limite: 5 })).toBe(3);
     expect(cobrosRestantes({ cobrosCreados: 9, limite: 5 })).toBe(0);
+  });
+});
+
+describe("mesDeInicio", () => {
+  it("es el mes en que empezó el comercio, en hora de Colombia", () => {
+    expect(mesDeInicio({ creadoEn: "2026-10-05T15:00:00.000Z" })).toBe(
+      "2026-10",
+    );
+    // 1 de octubre a las 02:00 UTC todavía es 30 de septiembre en Bogotá.
+    expect(mesDeInicio({ creadoEn: "2026-10-01T02:00:00.000Z" })).toBe(
+      "2026-09",
+    );
   });
 });

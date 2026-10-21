@@ -395,6 +395,7 @@ export function crearRepoPrisma(
           usuario: true,
           walletUrl: true,
           ultimoNumero: true,
+          creadoEn: true,
         },
       });
       if (!fila) return undefined;
@@ -405,6 +406,7 @@ export function crearRepoPrisma(
         ...(fila.walletUrl ? { wallet: fila.walletUrl } : {}),
         cobrosCreados: fila.ultimoNumero,
         limite: LIMITE_COBROS_SIN_REGISTRO,
+        creadoEn: fila.creadoEn.toISOString(),
       };
     },
 
