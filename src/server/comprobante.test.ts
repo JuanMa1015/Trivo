@@ -5,6 +5,7 @@ import { generarComprobante } from "./comprobante";
 
 const cobro: Cobro = {
   id: "id-1",
+  comercioId: "c-1",
   numero: 12,
   codigo: "657785",
   token: "t".repeat(22),

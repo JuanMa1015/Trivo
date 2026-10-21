@@ -40,9 +40,16 @@ Errores: siempre `{ "error": "<codigo>" }` con un código estable (`wallet_inval
 
 `GET /api/cobros/[id]/comprobante?formato=a4|pos` (solo vendedor, solo cobros ya cobrados) descarga un PDF carta o un ticket POS de 80 mm. Es un recibo de Trivo con el código de confirmación; **no es una factura electrónica de venta**: esa la emite el comercio ante la DIAN con su proveedor.
 
-### Cuenta del comercio
+### Cuentas por vendedor
 
-`POST /api/registro` crea la cuenta con tres datos: usuario, nombre del comercio y contraseña (hash scrypt con sal propia; nunca en claro). No se exige al empezar: una franja avisa en las pantallas del vendedor y el registro pasa a ser **obligatorio al quinto cobro** (`POST /api/cobros` responde `403 registro_requerido`). Con `VENDEDOR_PIN` definido, el PIN autoriza el registro y deja la sesión abierta; para entrar sigue valiendo solo el PIN. Hay una sola cuenta por despliegue (`ponytail`: con varios comercios, una por cada uno). La contraseña queda guardada para cambiar datos más adelante; hoy no se usa para iniciar sesión.
+Cada vendedor tiene su comercio: usuario único (sin distinguir mayúsculas), contraseña (hash scrypt con sal propia; nunca en claro) y **su propia wallet de cobro**. Todo lo del vendedor (cobros, talonario, resumen, impuestos, comprobantes y certificado) se filtra por el comercio de su sesión; las rutas y los repositorios reciben siempre el id del comercio, así que un cobro ajeno responde `404` aunque se conozca su id.
+
+- **Invitado, sin PIN ni cuenta:** quien cobra por primera vez recibe una cookie de sesión firmada (`HttpOnly`, `SameSite=Lax`, `Secure` con https, 30 días) y un comercio sin cuenta. Puede hacer **5 cobros** con todo el flujo. Esos cobros salen a la wallet de la plataforma (`OPEN_PAYMENTS_RECEIVER_WALLET_URL`, o la wallet del cliente de Open Payments). Al sexto, `POST /api/cobros` responde `403 registro_requerido`.
+- **Crear la cuenta** (`POST /api/registro`): usuario, comercio, contraseña y **wallet de cobro**. Si quien registra era invitado, la cuenta se queda con **el mismo comercio**: conserva sus cobros, su numeración y sus totales. Se valida la wallet (https, servidor permitido, existe y es COP) antes de guardarla.
+- **Iniciar sesión** (`POST /api/acceso`): usuario y contraseña. Al salir (`DELETE /api/acceso`) se borra la cookie. Un invitado no ve "Salir" porque perdería sus cobros.
+- **Cobrar a la wallet del vendedor:** Trivo pide a la wallet del vendedor un grant no interactivo de `incoming-payment` y crea el cobro ahí; el cobro guarda esa wallet (`wallet_receptora`) y la conciliación consulta esa misma wallet. Hoy solo se aceptan wallets en COP.
+- **Límites de abuso:** registro abierto con tope por IP (5/hora) y global (100/hora); un comercio nuevo por cada visitante que cobra, con tope por IP (10/hora) y global (300/hora); inicio de sesión con tope por IP, global y por usuario, y comparación de contraseña con hash falso si el usuario no existe. Los topes viven en memoria del proceso (`ponytail`: con varias instancias van a la base). Sin proxy, la IP la puede inventar quien llame directo al puerto: el tope global es el que frena de verdad.
+- **Migración:** `20261017180000_multi_vendedor` solo agrega columnas (`comercios.wallet_url`, `cobros.wallet_receptora`) y un índice único sobre `lower(usuario)`. El comercio y los cobros que ya había siguen siendo de su dueño: si tenía cuenta, entra con su usuario y contraseña; si no, queda como un invitado huérfano que nadie reclama.
 
 ### Certificado de ventas verificable
 
@@ -106,7 +113,7 @@ Ningún sistema elimina las estafas por completo. Esto es lo que Trivo hace, y l
 
 ### Variables de seguridad
 
-- `VENDEDOR_PIN`: clave del comercio, mínimo 8 caracteres. Obligatoria con Open Payments real (sin ella el área del vendedor responde 503); en demo, si no se define, queda abierta. Da una cookie de sesión de 12 horas (`HttpOnly`, `SameSite=Lax`, `Secure` con https) firmada con esta clave: cambiarla cierra todas las sesiones. Protege `/`, `/cobro/*` y `/api/cobros*`; el pagador (`/p`, `/pagar`, `/api/pago`) no la necesita. Los enlaces del vendedor usan el `id` aleatorio del cobro; el N.º 0001 solo se muestra.
+- Sesión del vendedor: cookie firmada con `CONFIRMACION_SECRETO` que lleva el id del comercio; cambiar el secreto cierra todas las sesiones. Ya no existe `VENDEDOR_PIN`. El pagador (`/p`, `/pagar`, `/api/pago`) no necesita sesión. Los enlaces del vendedor usan el `id` aleatorio del cobro; el N.º 0001 solo se muestra.
 - `CONFIRMACION_SECRETO`: mínimo 32 caracteres. Obligatorio en producción con Open Payments real; en demo se usa uno aleatorio por proceso. Genera uno con `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
 
 ## Límites conocidos

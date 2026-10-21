@@ -1,37 +1,24 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { json } from "./http";
+import { secretoConfirmacion } from "./confirmacion";
+import type { Perfil } from "@/lib/perfil";
+import { json, uuidDeRuta } from "./http";
+import { obtenerServicio } from "./servicio";
 
 /**
- * Acceso del vendedor: una clave (VENDEDOR_PIN) que da una cookie firmada y con vencimiento.
- * Sin cuentas todavía: es lo mínimo para no dejar los cobros y sus códigos a la vista.
- * ponytail: una sola clave para todo el comercio; con cuentas reales (Supabase Auth) se
- * reemplaza esta pieza y las rutas siguen llamando a `exigirVendedor`.
+ * Sesión del vendedor: una cookie firmada que dice a qué comercio pertenece (`<comercio>.<vence>.<firma>`).
+ * La usa por igual el invitado (aún sin cuenta) y quien inició sesión con usuario y contraseña;
+ * cada ruta del vendedor lee de aquí el comercio y filtra todo por él.
  */
 export const COOKIE_VENDEDOR = "trivo_vendedor";
-export const SESION_VENDEDOR_S = 12 * 60 * 60;
-export const PIN_MINIMO = 8;
+/** Un invitado necesita días para usar sus 5 cobros; la cuenta usa la misma duración. */
+export const SESION_VENDEDOR_S = 30 * 24 * 60 * 60;
 
 type Env = Record<string, string | undefined>;
 
-/**
- * Con el riel real el área del vendedor siempre exige clave. En demo (dinero de mentira)
- * queda abierta, salvo que se defina VENDEDOR_PIN.
- */
-export function accesoRequerido(env: Env = process.env): boolean {
-  return env.COBROS_RAIL === "open-payments" || Boolean(env.VENDEDOR_PIN);
-}
-
-/** La clave existe y es lo bastante larga para que adivinarla no sea práctico. */
-export function accesoConfigurado(env: Env = process.env): boolean {
-  return (env.VENDEDOR_PIN?.length ?? 0) >= PIN_MINIMO;
-}
-
-/** La firma depende de la clave: cambiarla cierra todas las sesiones abiertas. */
+/** La firma depende del secreto del servidor: cambiarlo cierra todas las sesiones. */
 function llave(env: Env): Buffer {
   return createHash("sha256")
-    .update(
-      `trivo-vendedor|${env.CONFIRMACION_SECRETO ?? ""}|${env.VENDEDOR_PIN ?? ""}`,
-    )
+    .update(`trivo-sesion|${secretoConfirmacion(env)}`)
     .digest();
 }
 
@@ -41,34 +28,31 @@ const firmar = (cuerpo: string, env: Env) =>
 const iguales = (a: Buffer, b: Buffer) =>
   a.length === b.length && timingSafeEqual(a, b);
 
-export function pinCorrecto(intento: string, env: Env = process.env): boolean {
-  if (!accesoConfigurado(env)) return false;
-  const hash = (s: string) => createHash("sha256").update(s).digest();
-  return iguales(hash(intento), hash(env.VENDEDOR_PIN ?? ""));
-}
-
-/** `<vence en segundos>.<firma>`: no lleva datos del vendedor, solo hasta cuándo vale. */
 export function crearSesion(
+  comercioId: string,
   env: Env = process.env,
   ahora = Date.now(),
 ): string {
-  const vence = String(Math.floor(ahora / 1000) + SESION_VENDEDOR_S);
-  return `${vence}.${firmar(vence, env)}`;
+  const cuerpo = `${comercioId}.${Math.floor(ahora / 1000) + SESION_VENDEDOR_S}`;
+  return `${cuerpo}.${firmar(cuerpo, env)}`;
 }
 
-export function sesionValida(
+/** El comercio de una cookie válida y vigente, o undefined. */
+export function comercioDeSesion(
   token: string | undefined,
   env: Env = process.env,
   ahora = Date.now(),
-): boolean {
-  if (!token || !accesoConfigurado(env)) return false;
+): string | undefined {
+  if (!token) return undefined;
   const partes = token.split(".");
-  if (partes.length !== 2 || !/^\d{1,12}$/.test(partes[0])) return false;
-  const [vence, firma] = partes;
-  return (
-    iguales(Buffer.from(firmar(vence, env)), Buffer.from(firma)) &&
-    Number(vence) > ahora / 1000
+  if (partes.length !== 3) return undefined;
+  const [comercioId, vence, firma] = partes;
+  if (!uuidDeRuta(comercioId) || !/^\d{1,12}$/.test(vence)) return undefined;
+  const valida = iguales(
+    Buffer.from(firmar(`${comercioId}.${vence}`, env)),
+    Buffer.from(firma),
   );
+  return valida && Number(vence) > ahora / 1000 ? comercioId : undefined;
 }
 
 export function leerCookie(
@@ -83,22 +67,17 @@ export function leerCookie(
   return undefined;
 }
 
-/**
- * Se llama al inicio de cada ruta del vendedor, no solo en el proxy: la API es la que
- * protege los datos. Devuelve la respuesta de rechazo, o null si puede seguir.
- */
-export function exigirVendedor(
+/** El comercio de la petición, según su cookie; undefined si no hay sesión. */
+export function comercioDe(
   request: Request,
   env: Env = process.env,
   ahora = Date.now(),
-): Response | null {
-  if (!accesoRequerido(env)) return null;
-  if (!accesoConfigurado(env))
-    return json({ error: "acceso_no_configurado" }, 503);
-  const token = leerCookie(request.headers.get("cookie"), COOKIE_VENDEDOR);
-  return sesionValida(token, env, ahora)
-    ? null
-    : json({ error: "no_autorizado" }, 401);
+): string | undefined {
+  return comercioDeSesion(
+    leerCookie(request.headers.get("cookie"), COOKIE_VENDEDOR),
+    env,
+    ahora,
+  );
 }
 
 /** Cookie de sesión: solo para HTTP, sin acceso desde scripts y no viaja entre sitios. */
@@ -110,3 +89,18 @@ export function cookieSesion(
   const segura = env.APP_BASE_URL?.startsWith("https://") ? "; Secure" : "";
   return `${COOKIE_VENDEDOR}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${segura}`;
 }
+
+/**
+ * El vendedor de la petición: su comercio y su perfil. Nulo si no hay sesión o si el comercio
+ * ya no existe (por ejemplo, la demo en memoria se reinició): se trata como un visitante nuevo.
+ */
+export async function vendedorDe(
+  request: Request,
+): Promise<{ comercioId: string; perfil: Perfil } | undefined> {
+  const comercioId = comercioDe(request);
+  if (!comercioId) return undefined;
+  const perfil = await obtenerServicio().perfil(comercioId);
+  return perfil ? { comercioId, perfil } : undefined;
+}
+
+export const sinSesion = () => json({ error: "no_autorizado" }, 401);

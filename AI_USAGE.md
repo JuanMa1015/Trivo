@@ -31,7 +31,14 @@ Requisito del hackatón: herramientas usadas, para qué, en qué archivos y qué
 
 ## Qué se escribió a mano
 
-_Completar por el equipo a medida que avance el proyecto._
+La mayor parte del código se generó con IA (ver la tabla de arriba) y el equipo lo revisó. Lo que **no** generó la IA, sino el equipo:
+
+- **Producto y decisiones:** la idea, el problema, el usuario, qué entra y qué no, el orden de prioridades y cada decisión de seguridad y de diseño que aprobamos.
+- **Cuentas y configuración real:** crear las wallets de prueba y sus llaves, registrar la llave pública, y escribir a mano la configuración del servidor (`.env`, claves y PIN), que nunca pasa por el repositorio.
+- **Despliegue:** ejecutar a mano en el servidor los comandos de despliegue y comprobar el resultado.
+- **Revisión y aprobación:** cada rama pasó por un pull request que un integrante revisó, probó y aprobó antes de fusionarlo.
+- **La demo:** probar el flujo de pago con wallets reales de la testnet y grabar los clips del video; la IA solo los montó.
+- **El pitch:** el contenido de las diapositivas y lo que se dice en la presentación.
 
 ## Reglas del equipo
 

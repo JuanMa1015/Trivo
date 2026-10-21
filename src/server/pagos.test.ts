@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { COMERCIO_EJEMPLO } from "@/lib/talonario";
+import { COMERCIO_INVITADO } from "@/lib/perfil";
 import {
   PAGO_SIN_CONFIRMAR_MS,
   TOKEN_RE,
@@ -14,11 +14,14 @@ import {
 import { ErrorPago } from "./open-payments/errores";
 import type { DatosWallet, PuertoOpenPayments } from "./open-payments/puerto";
 import { crearServicioDemo, crearServicioOpenPayments } from "./pagos";
+import { atado, servicioAtado } from "./prueba-comercio";
 
 const T0 = Date.parse("2026-10-16T15:00:00.000Z");
 const SECRETO = "s".repeat(32);
 const RECEPTORA = "https://ilp.interledger-test.dev/test-open";
 const PAGADOR = "https://ilp.interledger-test.dev/unabot-jose-usd";
+const ROSA = "https://ilp.interledger-test.dev/rosa-cop";
+const LUIS_USD = "https://ilp.interledger-test.dev/luis-usd";
 const AUTH_PAGADOR = "https://auth.interledger-test.dev/pagador";
 
 const config = {
@@ -54,6 +57,7 @@ function crearPuertoFalso(ahora: () => number) {
     pagoSalienteFallido: false,
     consultasSalientes: [] as string[],
     descripciones: [] as (string | undefined)[],
+    walletsDeCobro: [] as string[],
     completados: [] as string[],
     consultas: 0,
   };
@@ -70,10 +74,25 @@ function crearPuertoFalso(ahora: () => number) {
       }
       if (url === PAGADOR)
         return wallet(url, "Unabot Jose", "USD", AUTH_PAGADOR);
+      if (url === ROSA)
+        return wallet(
+          url,
+          "Rosa",
+          "COP",
+          "https://auth.interledger-test.dev/rosa",
+        );
+      if (url === LUIS_USD)
+        return wallet(
+          url,
+          "Luis",
+          "USD",
+          "https://auth.interledger-test.dev/luis",
+        );
       throw new ErrorPago("wallet_invalida");
     },
-    async crearCobro({ monto, descripcion }) {
+    async crearCobro({ receptora, monto, descripcion }) {
       control.descripciones.push(descripcion);
+      control.walletsDeCobro.push(receptora.url);
       const incomingPaymentUrl = `https://ilp.interledger-test.dev/recursos/incoming/${incoming.size + 1}`;
       incoming.set(incomingPaymentUrl, monto);
       return { incomingPaymentUrl };
@@ -123,14 +142,13 @@ function crearPuertoFalso(ahora: () => number) {
 function montarReal(tasaReferencia?: () => Promise<number | null>) {
   let t = T0;
   const ahora = () => t;
-  const repo = crearRepoMemoria(ahora, {
-    completarDemo: false,
-    semilla: false,
-  });
+  const crudo = crearRepoMemoria(ahora, { completarDemo: false });
+  const idP = crudo.crearInvitado();
+  const repo = atado(crudo, idP);
   const intentos = crearRepoIntentosMemoria();
   const { puerto, control } = crearPuertoFalso(ahora);
-  const servicio = crearServicioOpenPayments({
-    repo,
+  const real = crearServicioOpenPayments({
+    repo: crudo,
     intentos,
     puerto,
     config,
@@ -138,8 +156,11 @@ function montarReal(tasaReferencia?: () => Promise<number | null>) {
     secreto: () => SECRETO,
     tasaReferencia,
   });
+  const servicio = servicioAtado(real, idP);
   return {
     servicio,
+    real,
+    crudo,
     repo,
     intentos,
     control,
@@ -202,7 +223,7 @@ describe("servicio Open Payments: cobrar", () => {
     const m = montarReal();
     const cobro = await m.servicio.crearCobro(50_000, "Ropa");
     const pago = await m.servicio.verComoPagador(cobro.token);
-    expect(pago?.receptor).toBe("Test_Open");
+    expect(pago?.receptor).toBe("Mi comercio");
     expect(Object.keys(pago ?? {}).sort()).toEqual([
       "comercio",
       "concepto",
@@ -222,7 +243,7 @@ describe("servicio Open Payments: cotizar", () => {
     const cobro = await m.servicio.crearCobro(50_000, "");
     const cot = await m.servicio.cotizar(cobro.token, PAGADOR);
     expect(cot).toMatchObject({
-      receptor: "Test_Open",
+      receptor: "Mi comercio",
       pagador: "Unabot Jose",
       debito: { valor: "1574", codigo: "USD", escala: 2 },
       recibe: { valor: "5000000", codigo: "COP", escala: 2 },
@@ -587,11 +608,13 @@ describe("servicio demo", () => {
     let t = T0;
     const ahora = () => t;
     const repo = crearRepoMemoria(ahora);
-    const servicio = crearServicioDemo({
-      repo,
-      intentos: crearRepoIntentosMemoria(),
-      ahora,
-    });
+    const servicio = servicioAtado(
+      crearServicioDemo({
+        repo,
+        intentos: crearRepoIntentosMemoria(),
+        ahora,
+      }),
+    );
     return { servicio, avanzar: (ms: number) => (t += ms) };
   }
 
@@ -666,8 +689,111 @@ describe("servicio Open Payments: lo que ve la wallet del vendedor", () => {
     await m.servicio.crearCobro(50_000, "Ropa");
     await m.servicio.crearCobro(20_000, "");
     expect(m.control.descripciones).toEqual([
-      `${COMERCIO_EJEMPLO} · Ropa`,
-      COMERCIO_EJEMPLO,
+      `${COMERCIO_INVITADO} · Ropa`,
+      COMERCIO_INVITADO,
     ]);
+  });
+});
+
+describe("servicio Open Payments: un vendedor por cuenta, cada uno con su wallet", () => {
+  async function cuenta(
+    m: ReturnType<typeof montarReal>,
+    usuario: string,
+    wallet: string,
+    invitado?: string,
+  ) {
+    const r = await m.real.registrarCuenta({
+      comercioId: invitado,
+      usuario,
+      comercio: `Tienda ${usuario}`,
+      passwordHash: "scrypt$a$b",
+      wallet: await m.real.validarWallet(wallet),
+    });
+    if (!r.ok) throw new Error("no se pudo registrar");
+    return r.comercioId;
+  }
+
+  it("el cobro de un vendedor se cobra en su wallet; el de un invitado, en la de la plataforma", async () => {
+    const m = montarReal();
+    const rosa = await cuenta(m, "rosa", ROSA);
+    const deRosa = await m.real.crearCobro(rosa, 10_000, "Pan");
+    await m.servicio.crearCobro(5_000, "");
+    expect(m.control.walletsDeCobro).toEqual([ROSA, RECEPTORA]);
+    expect(deRosa.walletReceptora).toBe(ROSA);
+    expect(deRosa.comercio).toBe("Tienda rosa");
+    expect(m.control.descripciones[0]).toBe("Tienda rosa · Pan");
+  });
+
+  it("el pagador ve el nombre del comercio y la wallet donde se cobra", async () => {
+    const m = montarReal();
+    const rosa = await cuenta(m, "rosa", ROSA);
+    const c = await m.real.crearCobro(rosa, 10_000, "");
+    expect(await m.real.verComoPagador(c.token)).toMatchObject({
+      receptor: "Tienda rosa",
+      receptorWallet: ROSA,
+    });
+  });
+
+  it("confirma el pago consultando la wallet de ese vendedor", async () => {
+    const m = montarReal();
+    const rosa = await cuenta(m, "rosa", ROSA);
+    const c = await m.real.crearCobro(rosa, 10_000, "");
+    const cot = await m.real.cotizar(c.token, PAGADOR);
+    await m.real.aprobar(c.token, cot.intentoId);
+    const nonce = await nonceDelIntento(m, cot.intentoId);
+    await m.real.completarRetorno(cot.intentoId, {
+      interactRef: "REF-R",
+      hash: hashDe(nonce, "REF-R"),
+    });
+    expect((await m.real.obtener(rosa, c.numero))?.estado).toBe("procesando");
+    m.control.llegoElDinero = true;
+    m.avanzar(2_000);
+    expect((await m.real.obtener(rosa, c.numero))?.estado).toBe("cobrado");
+    expect(await m.real.ingresosDelAnio(rosa, 2026)).toBe(10_000);
+  });
+
+  it("un vendedor no ve, abre ni toca los cobros de otro", async () => {
+    const m = montarReal();
+    const rosa = await cuenta(m, "rosa", ROSA);
+    const ajeno = await m.servicio.crearCobro(7_000, "ajeno");
+    const suyo = await m.real.crearCobro(rosa, 1_000, "suyo");
+    expect((await m.real.listar(rosa)).map((c) => c.concepto)).toEqual([
+      "suyo",
+    ]);
+    expect(await m.real.numeroDe(rosa, ajeno.id)).toBeUndefined();
+    expect(await m.real.numeroDe(rosa, suyo.id)).toBe(suyo.numero);
+    expect(await m.real.ingresosDelAnio(rosa, 2026)).toBe(0);
+    expect(await m.real.registrarEvento(rosa, 99, "link_copiado")).toBe(false);
+  });
+
+  it("al registrarse, el invitado conserva sus cobros y los siguientes salen a su wallet", async () => {
+    const m = montarReal();
+    const invitado = await m.servicio.id;
+    const antes = await m.servicio.crearCobro(3_000, "primero");
+    await cuenta(m, "rosa", ROSA, invitado);
+    expect((await m.real.listar(invitado)).map((c) => c.concepto)).toEqual([
+      "primero",
+    ]);
+    const despues = await m.real.crearCobro(invitado, 4_000, "");
+    expect(despues.numero).toBe(antes.numero + 1);
+    expect(m.control.walletsDeCobro).toEqual([RECEPTORA, ROSA]);
+    expect(await m.real.perfil(invitado)).toMatchObject({
+      registrado: true,
+      wallet: ROSA,
+    });
+  });
+
+  it("rechaza una wallet de cobro que no es COP o de un servidor no permitido", async () => {
+    const m = montarReal();
+    expect(await codigoDe(m.real.validarWallet(LUIS_USD))).toBe(
+      "moneda_no_soportada",
+    );
+    expect(
+      await codigoDe(m.real.validarWallet("https://evil.example/rosa")),
+    ).toBe("wallet_no_permitida");
+    expect(
+      await codigoDe(m.real.validarWallet("http://ilp.interledger-test.dev/x")),
+    ).toBe("wallet_invalida");
+    expect(await m.real.validarWallet(ROSA)).toBe(ROSA);
   });
 });

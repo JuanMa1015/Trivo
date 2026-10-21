@@ -7,7 +7,7 @@ import {
   uuidDeRuta,
 } from "@/server/http";
 import { obtenerServicio } from "@/server/servicio";
-import { exigirVendedor } from "@/server/vendedor";
+import { vendedorDe } from "@/server/vendedor";
 
 /**
  * Comprobante en PDF de un cobro ya cobrado: `?formato=a4` (carta, por defecto) o
@@ -18,17 +18,20 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   await connection();
-  const rechazo = exigirVendedor(request);
-  if (rechazo) return rechazo;
   const id = uuidDeRuta((await ctx.params).id);
   if (id === null) return noEncontrado();
   const formato =
     new URL(request.url).searchParams.get("formato") === "pos" ? "pos" : "a4";
   try {
+    const vendedor = await vendedorDe(request);
+    if (!vendedor) return noEncontrado();
+    const { comercioId } = vendedor;
     const servicio = obtenerServicio();
-    const numero = await servicio.numeroDe(id);
+    const numero = await servicio.numeroDe(comercioId, id);
     const cobro =
-      numero === undefined ? undefined : await servicio.obtener(numero);
+      numero === undefined
+        ? undefined
+        : await servicio.obtener(comercioId, numero);
     if (!cobro) return noEncontrado();
     if (cobro.estado !== "cobrado")
       return json({ error: "no_disponible", estado: cobro.estado }, 409);

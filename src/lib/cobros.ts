@@ -45,6 +45,8 @@ export type Evento = { tipo: TipoEvento; en: string; detalle?: string };
 export type Cobro = {
   /** Identificador interno; no se muestra al pagador. */
   id: string;
+  /** Comercio dueño del cobro: todo lo del vendedor se filtra por él. */
+  comercioId: string;
   numero: number;
   /** 6 dígitos para decirlos en voz alta. Solo sirve para encontrar el token; no para pagar. */
   codigo: string;
@@ -62,6 +64,8 @@ export type Cobro = {
   /** Objetos de Open Payments (URLs públicas); vacíos en el modo demo. */
   incomingPaymentUrl?: string;
   outgoingPaymentUrl?: string;
+  /** Wallet en la que se cobró; ausente = la wallet de la plataforma. */
+  walletReceptora?: string;
   eventos: Evento[];
 };
 

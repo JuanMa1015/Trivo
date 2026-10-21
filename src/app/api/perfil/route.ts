@@ -1,15 +1,24 @@
 import { connection } from "next/server";
+import {
+  COMERCIO_INVITADO,
+  LIMITE_COBROS_SIN_REGISTRO,
+  type Perfil,
+} from "@/lib/perfil";
 import { json, respuestaDeError } from "@/server/http";
-import { obtenerServicio } from "@/server/servicio";
-import { exigirVendedor } from "@/server/vendedor";
+import { vendedorDe } from "@/server/vendedor";
+
+const VISITANTE: Perfil = {
+  registrado: false,
+  comercio: COMERCIO_INVITADO,
+  cobrosCreados: 0,
+  limite: LIMITE_COBROS_SIN_REGISTRO,
+};
 
 /** Usuario y nombre del comercio para las pantallas, y cuántos cobros lleva (aviso de registro). */
 export async function GET(request: Request) {
   await connection();
-  const rechazo = exigirVendedor(request);
-  if (rechazo) return rechazo;
   try {
-    return json(await obtenerServicio().perfil());
+    return json((await vendedorDe(request))?.perfil ?? VISITANTE);
   } catch (error) {
     return respuestaDeError(error);
   }

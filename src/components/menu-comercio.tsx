@@ -22,8 +22,8 @@ export function iniciales(nombre: string): string {
 /**
  * La cuenta del vendedor: su nombre de usuario al lado de su avatar (el comercio va en
  * el banner, junto a la ubicación). Abre un menú con el comercio, crear cuenta si aún no
- * la tiene y salir. Salir borra la sesión (DELETE /api/acceso) y recarga: si el comercio
- * usa clave, vuelve a pedirla, y la recarga descarta las pantallas guardadas en memoria.
+ * la tiene y salir. Salir (solo con cuenta: un invitado perdería sus cobros) borra la
+ * sesión (DELETE /api/acceso) y recarga, que descarta las pantallas guardadas en memoria.
  */
 export function MenuComercio({
   usuario,
@@ -124,26 +124,37 @@ export function MenuComercio({
             <IconUbicacion width={18} height={18} className="shrink-0" />
             <span className="truncate">{comercio}</span>
           </p>
-          {registrado ? null : (
-            <Link
-              href="/registro"
+          {registrado ? (
+            <button
+              type="button"
               role="menuitem"
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold text-primary hover:bg-aqua/10 lg:text-web-sm"
+              onClick={salir}
+              disabled={saliendo}
+              className="flex h-11 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-tinta hover:bg-aqua/10 disabled:opacity-60 lg:text-web-sm"
             >
-              <IconUsuario width={20} height={20} />
-              Crear cuenta
-            </Link>
+              <IconSalir width={20} height={20} />
+              {saliendo ? "Saliendo…" : "Salir"}
+            </button>
+          ) : (
+            <>
+              <Link
+                href="/registro"
+                role="menuitem"
+                className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold text-primary hover:bg-aqua/10 lg:text-web-sm"
+              >
+                <IconUsuario width={20} height={20} />
+                Crear cuenta
+              </Link>
+              <Link
+                href="/acceso"
+                role="menuitem"
+                className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold text-tinta hover:bg-aqua/10 lg:text-web-sm"
+              >
+                <IconSalir width={20} height={20} />
+                Ya tengo cuenta
+              </Link>
+            </>
           )}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={salir}
-            disabled={saliendo}
-            className="flex h-11 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-tinta hover:bg-aqua/10 disabled:opacity-60 lg:text-web-sm"
-          >
-            <IconSalir width={20} height={20} />
-            {saliendo ? "Saliendo…" : "Salir"}
-          </button>
           {error ? (
             <p role="alert" className="px-3 pb-2 text-sm text-error">
               No pudimos salir. Revisa tu conexión.

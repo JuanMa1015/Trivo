@@ -33,7 +33,7 @@ function Franja() {
       <span>
         {ultimo
           ? "Para seguir cobrando necesitas crear tu cuenta."
-          : `Crea tu cuenta con tu usuario y el nombre de tu comercio. Te quedan ${restantes} ${restantes === 1 ? "cobro" : "cobros"} antes de que sea obligatorio.`}
+          : `Estás cobrando sin cuenta: crea la tuya para guardar tus ventas. Te quedan ${restantes} ${restantes === 1 ? "cobro" : "cobros"} antes de que sea obligatorio.`}
       </span>
       <Link
         href={ultimo ? "/registro?obligatorio=1" : "/registro"}

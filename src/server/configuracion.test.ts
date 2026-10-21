@@ -10,7 +10,6 @@ const buena = {
   OPEN_PAYMENTS_CLIENT_WALLET_URL: "https://ilp.interledger-test.dev/test-open",
   OPEN_PAYMENTS_KEY_ID: "376a76e0-8c57-4eb6-acbe-a87df3fd3282",
   OPEN_PAYMENTS_PRIVATE_KEY_PATH: "/run/secrets/open_payments.key",
-  VENDEDOR_PIN: "clave-larga-1",
 };
 const conLlave = () => true;
 
@@ -61,7 +60,7 @@ describe("problemasDeConfiguracion", () => {
     ).toMatch(/UUID/);
   });
 
-  it("detecta la wallet de ejemplo y el PIN ausente o corto", () => {
+  it("detecta la wallet de ejemplo", () => {
     expect(
       problemasDeConfiguracion(
         {
@@ -72,12 +71,6 @@ describe("problemasDeConfiguracion", () => {
         conLlave,
       ).join(),
     ).toMatch(/texto de ejemplo/);
-    expect(
-      problemasDeConfiguracion(
-        { ...buena, VENDEDOR_PIN: "corta" },
-        conLlave,
-      ).join(),
-    ).toMatch(/VENDEDOR_PIN/);
   });
 
   it("detecta que el archivo de la llave no está", () => {
@@ -91,11 +84,9 @@ describe("problemasDeConfiguracion", () => {
       {
         ...buena,
         CONFIRMACION_SECRETO: "SECRETO-CORTO",
-        VENDEDOR_PIN: "PIN-CORTO",
       },
       conLlave,
     ).join("\n");
     expect(texto).not.toContain("SECRETO-CORTO");
-    expect(texto).not.toContain("PIN-CORTO");
   });
 });

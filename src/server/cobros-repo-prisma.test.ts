@@ -4,6 +4,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { PROCESO_DEMO_MS, VENCE_EN_MS } from "@/lib/cobros";
 import { crearRepoPrisma } from "./cobros-repo-prisma";
 import { crearRepoIntentosPrisma } from "./intentos-repo-prisma";
+import { atado } from "./prueba-comercio";
 
 /**
  * Pruebas de integración contra una base Postgres desechable con las migraciones
@@ -20,20 +21,23 @@ if (url && /supabase\.(co|com)/.test(url)) {
 
 describe.skipIf(!url)("repositorio Prisma", () => {
   let prisma: PrismaClient;
-  let repo: ReturnType<typeof crearRepoPrisma>;
+  let base: ReturnType<typeof crearRepoPrisma>;
+  // El mismo repositorio atado a un comercio nuevo: las pruebas viejas no repiten el id.
+  let repo: ReturnType<typeof atado>;
   // Open Payments real: el repositorio no confirma pagos por su cuenta.
-  let repoReal: ReturnType<typeof crearRepoPrisma>;
+  let repoReal: ReturnType<typeof atado>;
   let intentos: ReturnType<typeof crearRepoIntentosPrisma>;
 
   beforeAll(() => {
     prisma = new PrismaClient({
       adapter: new PrismaPg({ connectionString: url }),
     });
-    repo = crearRepoPrisma(() => prisma);
-    repoReal = crearRepoPrisma(() => prisma, undefined, {
-      completarDemo: false,
-      semilla: false,
-    });
+    base = crearRepoPrisma(() => prisma);
+    repo = atado(base);
+    repoReal = atado(
+      crearRepoPrisma(() => prisma, undefined, { completarDemo: false }),
+      repo.id,
+    );
     intentos = crearRepoIntentosPrisma(() => prisma);
   });
   afterAll(() => prisma.$disconnect());
@@ -239,37 +243,89 @@ describe.skipIf(!url)("repositorio Prisma", () => {
     ).rejects.toThrow();
   });
 
-  it("registrar la cuenta guarda usuario y nombre una sola vez y la base valida el formato", async () => {
-    const aislado = crearRepoPrisma(() => prisma, undefined, {
-      completarDemo: false,
-      semilla: false,
+  describe("varios comercios", () => {
+    const cuenta = (usuario: string) => ({
+      usuario,
+      comercio: "Tienda de prueba",
+      passwordHash: "scrypt$a$b",
+      wallet: "https://ilp.interledger-test.dev/prueba",
     });
-    const antes = await aislado.perfil();
-    if (!antes.registrado) {
-      const usuario = `prueba${Date.now()}`;
+    const unico = () => `p${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+
+    it("cada comercio ve solo lo suyo, aunque el número se repita", async () => {
+      const a = await base.crearInvitado();
+      const b = await base.crearInvitado();
+      const deA = await base.crear(a, 1_000, "de A");
+      const deB = await base.crear(b, 2_000, "de B");
+      expect(deA.numero).toBe(1);
+      expect(deB.numero).toBe(1);
+      expect((await base.listar(a)).map((c) => c.concepto)).toEqual(["de A"]);
+      expect((await base.obtener(b, 1))?.concepto).toBe("de B");
+      expect(await base.obtenerPorId(deA.id, b)).toBeUndefined();
+      expect(await base.marcarCobrado(b, deA.numero + 5, "x")).toBe(false);
+      expect(await base.totalCobradoDelAnio(a, 2026)).toBe(0);
+    });
+
+    it("el invitado se vuelve cuenta sin perder sus cobros", async () => {
+      const id = await base.crearInvitado();
+      const antes = await base.crear(id, 1_000, "primero");
+      const usuario = unico();
       expect(
-        await aislado.registrarPerfil({
-          usuario,
-          comercio: "Tienda de prueba",
-          passwordHash: "scrypt$a$b",
-        }),
-      ).toBe(true);
-      expect(await aislado.perfil()).toMatchObject({
+        await base.registrarCuenta({ comercioId: id, ...cuenta(usuario) }),
+      ).toEqual({
+        ok: true,
+        comercioId: id,
+      });
+      expect(await base.perfil(id)).toMatchObject({
         registrado: true,
         usuario,
         comercio: "Tienda de prueba",
+        wallet: "https://ilp.interledger-test.dev/prueba",
+        cobrosCreados: 1,
       });
-    }
-    expect(
-      await aislado.registrarPerfil({
-        usuario: "otro",
-        comercio: "Dos",
-        passwordHash: "scrypt$c$d",
-      }),
-    ).toBe(false);
-    await expect(
-      prisma.comercio.updateMany({ data: { passwordHash: "md5$x" } }),
-    ).rejects.toThrow();
+      expect((await base.obtener(id, antes.numero))?.comercio).toBe(
+        "Tienda de prueba",
+      );
+      expect((await base.crear(id, 2_000, "")).numero).toBe(2);
+      expect(
+        await base.registrarCuenta({ comercioId: id, ...cuenta(unico()) }),
+      ).toEqual({ ok: false, motivo: "ya_registrado" });
+    });
+
+    it("el usuario es único sin importar mayúsculas, también en paralelo", async () => {
+      const usuario = unico();
+      const [uno, dos] = await Promise.all([
+        base.registrarCuenta(cuenta(usuario)),
+        base.registrarCuenta(cuenta(usuario.toUpperCase())),
+      ]);
+      expect([uno.ok, dos.ok].filter(Boolean)).toHaveLength(1);
+      expect((await base.cuentaDe(usuario.toUpperCase()))?.passwordHash).toBe(
+        "scrypt$a$b",
+      );
+      expect(await base.cuentaDe(`${usuario}x`)).toBeUndefined();
+    });
+
+    it("guarda en el cobro la wallet donde se cobró", async () => {
+      const id = await base.crearInvitado();
+      const c = await base.crear(id, 1_000, "", {
+        walletReceptora: "https://ilp.interledger-test.dev/prueba",
+      });
+      expect(c.walletReceptora).toBe("https://ilp.interledger-test.dev/prueba");
+      expect((await base.crear(id, 1_000, "")).walletReceptora).toBeUndefined();
+    });
+
+    it("la base valida el formato de la contraseña y de las wallets", async () => {
+      await expect(
+        prisma.comercio.updateMany({ data: { passwordHash: "md5$x" } }),
+      ).rejects.toThrow();
+      await expect(
+        prisma.comercio.updateMany({ data: { walletUrl: "http://inseguro" } }),
+      ).rejects.toThrow();
+      const id = await base.crearInvitado();
+      await expect(
+        base.crear(id, 1_000, "", { walletReceptora: "ftp://x" }),
+      ).rejects.toThrow();
+    });
   });
 
   it("resumenCobrado suma lo cobrado en el rango", async () => {

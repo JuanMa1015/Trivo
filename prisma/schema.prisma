@@ -44,6 +44,8 @@ model Comercio {
   // Cuenta del comercio: nulas hasta que se registra. La contraseña va con hash scrypt.
   usuario      String?  @unique
   passwordHash String?  @map("password_hash")
+  // Wallet donde este vendedor recibe sus cobros. Nula = la wallet de la plataforma (invitados).
+  walletUrl    String?  @map("wallet_url")
   ultimoNumero Int      @default(0) @map("ultimo_numero")
   creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
   cobros       Cobro[]
@@ -71,6 +73,8 @@ model Cobro {
   outgoingPaymentUrl String? @map("outgoing_payment_url")
   // Token del permiso del pagador, solo para consultar si su pago falló. Se borra al cerrar el cobro.
   outgoingToken String? @map("outgoing_token")
+  // Wallet en la que se creó el incoming payment; nula = la wallet de la plataforma.
+  walletReceptora String? @map("wallet_receptora")
 
   comercio Comercio      @relation(fields: [comercioId], references: [id])
   eventos  Evento[]
