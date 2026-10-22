@@ -1,7 +1,6 @@
 import { accessSync, constants } from "node:fs";
 import { secretoConfirmacion } from "./confirmacion";
 import { leerConfigOpenPayments } from "./open-payments/config";
-import { accesoConfigurado } from "./vendedor";
 
 type Env = Record<string, string | undefined>;
 
@@ -36,7 +35,6 @@ export function problemasDeConfiguracion(
     if (
       nombre.startsWith("OPEN_PAYMENTS_") ||
       nombre === "CONFIRMACION_SECRETO" ||
-      nombre === "VENDEDOR_PIN" ||
       nombre === "APP_BASE_URL"
     ) {
       if (valor && (/[<>]/.test(valor) || /your-wallet/i.test(valor)))
@@ -71,8 +69,6 @@ export function problemasDeConfiguracion(
       "CONFIRMACION_SECRETO: falta o tiene menos de 32 caracteres",
     );
   }
-  if (!accesoConfigurado(env))
-    problemas.push("VENDEDOR_PIN: falta o tiene menos de 8 caracteres");
 
   return problemas;
 }

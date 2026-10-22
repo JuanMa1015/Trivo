@@ -6,22 +6,25 @@ import {
   uuidDeRuta,
 } from "@/server/http";
 import { obtenerServicio } from "@/server/servicio";
-import { exigirVendedor } from "@/server/vendedor";
+import { vendedorDe } from "@/server/vendedor";
 
 export async function GET(
   request: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   await connection();
-  const rechazo = exigirVendedor(request);
-  if (rechazo) return rechazo;
   const id = uuidDeRuta((await ctx.params).id);
   if (id === null) return noEncontrado();
   try {
+    const vendedor = await vendedorDe(request);
+    if (!vendedor) return noEncontrado();
+    const { comercioId } = vendedor;
     const servicio = obtenerServicio();
-    const numero = await servicio.numeroDe(id);
+    const numero = await servicio.numeroDe(comercioId, id);
     const cobro =
-      numero === undefined ? undefined : await servicio.obtener(numero);
+      numero === undefined
+        ? undefined
+        : await servicio.obtener(comercioId, numero);
     // `modo` deja que la pantalla oculte el pago simulado cuando el riel es real.
     return cobro ? json({ cobro, modo: servicio.modo }) : noEncontrado();
   } catch (error) {

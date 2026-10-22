@@ -6,7 +6,7 @@ import {
   uuidDeRuta,
 } from "@/server/http";
 import { obtenerServicio } from "@/server/servicio";
-import { exigirVendedor } from "@/server/vendedor";
+import { vendedorDe } from "@/server/vendedor";
 
 /**
  * Solo demo: simula la aprobación del pagador. Con Open Payments real no existe
@@ -19,14 +19,15 @@ export async function POST(
   await connection();
   const servicio = obtenerServicio();
   if (servicio.modo !== "demo") return noEncontrado();
-  const rechazo = exigirVendedor(request);
-  if (rechazo) return rechazo;
   const id = uuidDeRuta((await ctx.params).id);
   if (id === null) return noEncontrado();
   try {
-    const numero = await servicio.numeroDe(id);
+    const vendedor = await vendedorDe(request);
+    if (!vendedor) return noEncontrado();
+    const { comercioId } = vendedor;
+    const numero = await servicio.numeroDe(comercioId, id);
     if (numero === undefined) return noEncontrado();
-    const resultado = await servicio.simularPago(numero);
+    const resultado = await servicio.simularPago(comercioId, numero);
     if (resultado.ok) return json({ estado: resultado.estado }, 202);
     return resultado.motivo === "no_encontrado"
       ? noEncontrado()

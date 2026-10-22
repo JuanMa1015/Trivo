@@ -11,7 +11,7 @@ import {
 import { secretoConfirmacion } from "@/server/confirmacion";
 import { json, respuestaDeError } from "@/server/http";
 import { obtenerServicio } from "@/server/servicio";
-import { exigirVendedor } from "@/server/vendedor";
+import { sinSesion, vendedorDe } from "@/server/vendedor";
 
 /**
  * Certificado de ventas de un mes (`?mes=YYYY-MM`, por defecto el actual) en PDF, con un
@@ -19,8 +19,11 @@ import { exigirVendedor } from "@/server/vendedor";
  */
 export async function GET(request: Request) {
   await connection();
-  const rechazo = exigirVendedor(request);
-  if (rechazo) return rechazo;
+  const vendedor = await vendedorDe(request);
+  if (!vendedor) return sinSesion();
+  // El certificado lleva el usuario y se puede verificar: solo para comercios con cuenta.
+  if (!vendedor.perfil.registrado)
+    return json({ error: "registro_requerido" }, 403);
 
   const hoy = hoyEnColombia(Date.now());
   const pedido =
@@ -31,12 +34,16 @@ export async function GET(request: Request) {
 
   try {
     const servicio = obtenerServicio();
-    const perfil = await servicio.perfil();
+    const { perfil } = vendedor;
     // Ni meses de antes de que el comercio empezara en Trivo: no hay nada que certificar.
     if (pedido < mesDeInicio(perfil))
       return json({ error: "datos_invalidos" }, 400);
     const { desde, hasta } = limitesDelMes(pedido);
-    const { total, cobros } = await servicio.resumenCobrado(desde, hasta);
+    const { total, cobros } = await servicio.resumenCobrado(
+      vendedor.comercioId,
+      desde,
+      hasta,
+    );
     const datos: DatosCertificado = {
       comercio: perfil.comercio,
       ...(perfil.usuario ? { usuario: perfil.usuario } : {}),

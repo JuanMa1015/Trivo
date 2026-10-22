@@ -36,28 +36,41 @@ export type Retorno = { interactRef?: string; hash?: string };
  */
 export type ServicioPagos = {
   modo: "demo" | "open-payments";
-  crearCobro(monto: number, concepto: string): Promise<Cobro>;
-  listar(): Promise<CobroResumen[]>;
-  obtener(numero: number): Promise<Cobro | undefined>;
+  /** Todo lo del vendedor recibe primero el id de su comercio: nunca toca datos ajenos. */
+  crearCobro(
+    comercioId: string,
+    monto: number,
+    concepto: string,
+  ): Promise<Cobro>;
+  listar(comercioId: string): Promise<CobroResumen[]>;
+  obtener(comercioId: string, numero: number): Promise<Cobro | undefined>;
   /** El vendedor llega por el id aleatorio del cobro; el N.º solo se muestra. */
-  numeroDe(id: string): Promise<number | undefined>;
+  numeroDe(comercioId: string, id: string): Promise<number | undefined>;
   /** Pesos cobrados en el año (hora de Colombia), para los topes tributarios. */
-  ingresosDelAnio(anio: number): Promise<number>;
+  ingresosDelAnio(comercioId: string, anio: number): Promise<number>;
   /** Total y cantidad de cobros cobrados entre dos instantes (ms), para el certificado de ventas. */
   resumenCobrado(
+    comercioId: string,
     desde: number,
     hasta: number,
   ): Promise<{ total: number; cobros: number }>;
-  /** Cuenta del comercio (usuario y nombre) y cuántos cobros lleva. */
-  perfil(): Promise<Perfil>;
-  registrarPerfil(datos: {
-    usuario: string;
-    comercio: string;
-    passwordHash: string;
-  }): Promise<boolean>;
-  registrarEvento(numero: number, tipo: TipoEvento): Promise<boolean>;
+  /** Cuenta del comercio (usuario, nombre, wallet) y cuántos cobros lleva; nulo si no existe. */
+  perfil(comercioId: string): Promise<Perfil | undefined>;
+  registrarEvento(
+    comercioId: string,
+    numero: number,
+    tipo: TipoEvento,
+  ): Promise<boolean>;
   /** Solo demo. */
-  simularPago(numero: number): Promise<ResultadoPago>;
+  simularPago(comercioId: string, numero: number): Promise<ResultadoPago>;
+
+  /** Comercio nuevo sin cuenta: la primera vez que alguien cobra. */
+  crearInvitado(): Promise<string>;
+  /** Comprueba que la wallet de cobro existe y recibe COP; devuelve su dirección normalizada. */
+  validarWallet(url: string): Promise<string>;
+  registrarCuenta: RepoCobros["registrarCuenta"];
+  cuentaDe: RepoCobros["cuentaDe"];
+
   /** Del código de 6 dígitos al token; nulo si no existe. */
   resolverCodigo(codigo: string): Promise<string | undefined>;
   verComoPagador(token: string): Promise<PagoPublico | undefined>;
@@ -130,20 +143,34 @@ export function crearServicioDemo({
   return {
     modo: "demo",
 
-    crearCobro: (monto, concepto) => repo.crear(monto, concepto),
-    listar: () => repo.listar(),
-    async obtener(numero) {
-      const c = await repo.obtener(numero);
+    crearCobro: (comercioId, monto, concepto) =>
+      repo.crear(comercioId, monto, concepto),
+    listar: (comercioId) => repo.listar(comercioId),
+    async obtener(comercioId, numero) {
+      const c = await repo.obtener(comercioId, numero);
       return c && firmar(c, c.id, secreto);
     },
-    numeroDe: async (id) => (await repo.obtenerPorId(id))?.numero,
-    ingresosDelAnio: (anio) => repo.totalCobradoDelAnio(anio),
-    resumenCobrado: (desde, hasta) => repo.resumenCobrado(desde, hasta),
-    perfil: () => repo.perfil(),
-    registrarPerfil: (datos) => repo.registrarPerfil(datos),
-    registrarEvento: (numero, tipo) => repo.registrar(numero, tipo),
-    simularPago: (numero) =>
-      repo.iniciarPagoDemo(numero, "simulado por el vendedor (demo)"),
+    numeroDe: async (comercioId, id) =>
+      (await repo.obtenerPorId(id, comercioId))?.numero,
+    ingresosDelAnio: (comercioId, anio) =>
+      repo.totalCobradoDelAnio(comercioId, anio),
+    resumenCobrado: (comercioId, desde, hasta) =>
+      repo.resumenCobrado(comercioId, desde, hasta),
+    perfil: (comercioId) => repo.perfil(comercioId),
+    registrarEvento: (comercioId, numero, tipo) =>
+      repo.registrar(comercioId, numero, tipo),
+    simularPago: (comercioId, numero) =>
+      repo.iniciarPagoDemo(
+        comercioId,
+        numero,
+        "simulado por el vendedor (demo)",
+      ),
+
+    crearInvitado: () => repo.crearInvitado(),
+    registrarCuenta: (datos) => repo.registrarCuenta(datos),
+    cuentaDe: (usuario) => repo.cuentaDe(usuario),
+    // En demo no se mueve dinero: basta con que sea una dirección https válida.
+    validarWallet: async (url) => validarUrlWallet(url),
 
     async resolverCodigo(codigo) {
       return (await repo.obtenerPorCodigo(codigo))?.token;
@@ -197,7 +224,12 @@ export function crearServicioDemo({
         recibe,
         venceEn,
       });
-      await repo.registrar(cobro.numero, "cotizado", hostDe(walletUrl));
+      await repo.registrar(
+        cobro.comercioId,
+        cobro.numero,
+        "cotizado",
+        hostDe(walletUrl),
+      );
       return {
         intentoId: intento.id,
         receptor: cobro.comercio,
@@ -214,6 +246,7 @@ export function crearServicioDemo({
       const intento = await intentos.obtener(intentoId);
       comprobarIntento(intento, cobro, ahora());
       const resultado = await repo.iniciarPagoDemo(
+        cobro!.comercioId,
         cobro!.numero,
         `wallet: ${intento.walletPagador}`,
       );
@@ -248,22 +281,27 @@ export function crearServicioOpenPayments({
   secreto = secretoConfirmacion,
   tasaReferencia = async () => null,
 }: DepsReal): ServicioPagos {
-  let receptoraCache: { datos: DatosWallet; hasta: number } | undefined;
+  const receptoras = new Map<string, { datos: DatosWallet; hasta: number }>();
   let conciliacion: { en: number; trabajo: Promise<void> } | undefined;
 
-  async function receptora(): Promise<DatosWallet> {
-    if (receptoraCache && receptoraCache.hasta > ahora())
-      return receptoraCache.datos;
-    const datos = await puerto.leerWallet(config.receptoraWalletUrl);
+  /** Datos de una wallet de cobro (la del vendedor o la de la plataforma), con caché corta. */
+  async function receptora(url: string): Promise<DatosWallet> {
+    const guardada = receptoras.get(url);
+    if (guardada && guardada.hasta > ahora()) return guardada.datos;
+    const datos = await puerto.leerWallet(url);
     if (datos.codigo !== "COP") {
       throw new ErrorPago(
         "moneda_no_soportada",
         "La wallet receptora debe estar en COP",
       );
     }
-    receptoraCache = { datos, hasta: ahora() + CACHE_WALLET_MS };
+    if (receptoras.size >= 500) receptoras.clear();
+    receptoras.set(url, { datos, hasta: ahora() + CACHE_WALLET_MS });
     return datos;
   }
+
+  const walletDe = (c: { walletReceptora?: string }) =>
+    c.walletReceptora ?? config.receptoraWalletUrl;
 
   const esperado = (monto: number, r: DatosWallet): Monto => ({
     valor: String(monto * 10 ** r.escala),
@@ -274,24 +312,27 @@ export function crearServicioOpenPayments({
   /** Confirma los pagos enviados que ya llegaron; da por fallidos los que no llegan. */
   async function conciliarAhora(): Promise<void> {
     const procesando = await repo.listarProcesando();
-    if (procesando.length === 0) return;
-    const r = await receptora();
     for (const cobro of procesando) {
       if (!cobro.incomingPaymentUrl) continue;
       try {
+        const r = await receptora(walletDe(cobro));
         const { completo } = await puerto.consultarRecibido({
           incomingPaymentUrl: cobro.incomingPaymentUrl,
           esperado: esperado(cobro.monto, r),
         });
         if (completo) {
           await repo.marcarCobrado(
+            cobro.comercioId,
             cobro.numero,
             "confirmado por Open Payments",
           );
           continue;
         }
         // La wallet del pagador avisa si su pago falló (por ejemplo, sin saldo).
-        const tokenPago = await repo.tokenDePago(cobro.numero);
+        const tokenPago = await repo.tokenDePago(
+          cobro.comercioId,
+          cobro.numero,
+        );
         if (tokenPago && cobro.outgoingPaymentUrl) {
           const { fallido } = await puerto.consultarPagoSaliente({
             outgoingPaymentUrl: cobro.outgoingPaymentUrl,
@@ -299,6 +340,7 @@ export function crearServicioOpenPayments({
           });
           if (fallido) {
             await repo.marcarFallido(
+              cobro.comercioId,
               cobro.numero,
               "la wallet del pagador no completó el pago",
             );
@@ -313,6 +355,7 @@ export function crearServicioOpenPayments({
           ahora() - Date.parse(enviado.en) > PAGO_SIN_CONFIRMAR_MS
         ) {
           await repo.marcarFallido(
+            cobro.comercioId,
             cobro.numero,
             "el dinero no llegó en 3 minutos",
           );
@@ -346,36 +389,51 @@ export function crearServicioOpenPayments({
   return {
     modo: "open-payments",
 
-    async crearCobro(monto, concepto) {
-      const r = await receptora();
+    async crearCobro(comercioId, monto, concepto) {
+      const perfil = await repo.perfil(comercioId);
+      if (!perfil) throw new ErrorPago("cobro_no_disponible");
+      // Cada vendedor cobra en su wallet; un invitado, en la de la plataforma.
+      const r = await receptora(perfil.wallet ?? config.receptoraWalletUrl);
       const { incomingPaymentUrl } = await puerto.crearCobro({
         receptora: r,
         monto: esperado(monto, r),
         venceEn: new Date(ahora() + VENCE_EN_MS),
-        descripcion: [(await repo.perfil()).comercio, concepto]
-          .filter(Boolean)
-          .join(" · "),
+        descripcion: [perfil.comercio, concepto].filter(Boolean).join(" · "),
       });
-      return repo.crear(monto, concepto, { incomingPaymentUrl });
+      return repo.crear(comercioId, monto, concepto, {
+        incomingPaymentUrl,
+        walletReceptora: perfil.wallet,
+      });
     },
 
-    async listar() {
+    async listar(comercioId) {
       await conciliar();
-      return repo.listar();
+      return repo.listar(comercioId);
     },
 
-    async obtener(numero) {
+    async obtener(comercioId, numero) {
       await conciliar();
-      const c = await repo.obtener(numero);
+      const c = await repo.obtener(comercioId, numero);
       return c && firmar(c, c.id, secreto);
     },
 
-    numeroDe: async (id) => (await repo.obtenerPorId(id))?.numero,
-    ingresosDelAnio: (anio) => repo.totalCobradoDelAnio(anio),
-    resumenCobrado: (desde, hasta) => repo.resumenCobrado(desde, hasta),
-    perfil: () => repo.perfil(),
-    registrarPerfil: (datos) => repo.registrarPerfil(datos),
-    registrarEvento: (numero, tipo) => repo.registrar(numero, tipo),
+    numeroDe: async (comercioId, id) =>
+      (await repo.obtenerPorId(id, comercioId))?.numero,
+    ingresosDelAnio: (comercioId, anio) =>
+      repo.totalCobradoDelAnio(comercioId, anio),
+    resumenCobrado: (comercioId, desde, hasta) =>
+      repo.resumenCobrado(comercioId, desde, hasta),
+    perfil: (comercioId) => repo.perfil(comercioId),
+    registrarEvento: (comercioId, numero, tipo) =>
+      repo.registrar(comercioId, numero, tipo),
+
+    crearInvitado: () => repo.crearInvitado(),
+    registrarCuenta: (datos) => repo.registrarCuenta(datos),
+    cuentaDe: (usuario) => repo.cuentaDe(usuario),
+    async validarWallet(url) {
+      const permitida = validarUrlWallet(url, config.hostsPermitidos);
+      return (await receptora(permitida)).url;
+    },
 
     async simularPago() {
       return { ok: false, motivo: "no_encontrado" };
@@ -390,7 +448,7 @@ export function crearServicioOpenPayments({
       await repo.registrarApertura(token);
       const c = await repo.obtenerPorToken(token);
       if (!c) return undefined;
-      const r = await receptora();
+      const r = await receptora(walletDe(c));
       const f = firmar(c, c.id, secreto);
       return {
         comercio: c.comercio,
@@ -398,7 +456,7 @@ export function crearServicioOpenPayments({
         concepto: c.concepto,
         estado: c.estado,
         venceEn: c.venceEn,
-        receptor: r.nombre ?? c.comercio,
+        receptor: c.comercio,
         receptorWallet: r.url,
         ...(f.pagadoEn ? { pagadoEn: f.pagadoEn } : {}),
         ...(f.confirmacion ? { confirmacion: f.confirmacion } : {}),
@@ -413,7 +471,7 @@ export function crearServicioOpenPayments({
       }
 
       const [r, pagador] = await Promise.all([
-        receptora(),
+        receptora(walletDe(cobro)),
         puerto.leerWallet(walletUrl),
       ]);
       const cotizacion = await puerto.cotizar({
@@ -443,6 +501,7 @@ export function crearServicioOpenPayments({
         venceEn: cotizacion.venceEn,
       });
       await repo.registrar(
+        cobro.comercioId,
         cobro.numero,
         "cotizado",
         pagador.nombre ?? hostDe(pagador.url),
@@ -450,7 +509,7 @@ export function crearServicioOpenPayments({
 
       return {
         intentoId: intento.id,
-        receptor: r.nombre ?? cobro.comercio,
+        receptor: cobro.comercio,
         pagador: pagador.nombre,
         debito: cotizacion.debito,
         recibe: cotizacion.recibe,
@@ -492,6 +551,7 @@ export function crearServicioOpenPayments({
         nonceAs: inicio.nonceAs,
       });
       await repo.registrar(
+        cobro!.comercioId,
         cobro!.numero,
         "consentimiento_iniciado",
         pagador.nombre ?? hostDe(pagador.url),
@@ -508,7 +568,12 @@ export function crearServicioOpenPayments({
       const token = cobro.token;
 
       const fallar = async (error: CodigoError, detalle: string) => {
-        await repo.registrar(cobro.numero, "pago_fallido", detalle);
+        await repo.registrar(
+          cobro.comercioId,
+          cobro.numero,
+          "pago_fallido",
+          detalle,
+        );
         return { token, error };
       };
 
@@ -556,6 +621,7 @@ export function crearServicioOpenPayments({
             interactRef,
           });
         await repo.marcarProcesando(
+          cobro.comercioId,
           cobro.numero,
           outgoingPaymentUrl,
           accessToken,

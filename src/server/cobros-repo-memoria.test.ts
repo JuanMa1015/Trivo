@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PROCESO_DEMO_MS, VENCE_EN_MS } from "@/lib/cobros";
 import { crearRepoMemoria } from "./cobros-repo-memoria";
+import { atado } from "./prueba-comercio";
 import { crearLimitador } from "./rate-limit";
 
 const T0 = Date.parse("2026-10-16T15:00:00.000Z");
+
+const nuevo = (...a: Parameters<typeof crearRepoMemoria>) =>
+  atado(crearRepoMemoria(...a));
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -13,7 +17,7 @@ afterEach(() => vi.useRealTimers());
 
 describe("cobros", () => {
   it("crea un cobro esperando, con vencimiento a 10 minutos y primer evento", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const c = await repo.crear(50_000, "Ropa");
     expect(c.estado).toBe("esperando");
     expect(c.codigo).toMatch(/^\d{6}$/);
@@ -22,7 +26,7 @@ describe("cobros", () => {
   });
 
   it("numera seguido y no repite códigos", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const a = await repo.crear(1_000, "");
     const b = await repo.crear(2_000, "");
     expect(b.numero).toBe(a.numero + 1);
@@ -30,7 +34,7 @@ describe("cobros", () => {
   });
 
   it("guarda la URL del incoming payment cuando se la dan", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const c = await repo.crear(1_000, "", {
       incomingPaymentUrl: "https://op.dev/ip/1",
     });
@@ -40,7 +44,7 @@ describe("cobros", () => {
   });
 
   it("el talonario no trae eventos y va del más nuevo al más viejo", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const c = await repo.crear(1_000, "");
     const lista = await repo.listar();
     expect(lista[0].numero).toBe(c.numero);
@@ -48,15 +52,14 @@ describe("cobros", () => {
   });
 
   it("sin semilla arranca vacío", async () => {
-    const repo = crearRepoMemoria(Date.now, {
+    const repo = await nuevo(Date.now, {
       completarDemo: false,
-      semilla: false,
     });
     expect(await repo.listar()).toEqual([]);
   });
 
   it("vence al leer y deja constancia con la hora de vencimiento", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const c = await repo.crear(50_000, "");
     vi.setSystemTime(T0 + VENCE_EN_MS + 1_000);
     expect((await repo.obtener(c.numero))?.estado).toBe("vencido");
@@ -68,7 +71,7 @@ describe("cobros", () => {
   });
 
   it("no deja pagar un cobro vencido", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const c = await repo.crear(50_000, "");
     vi.setSystemTime(T0 + VENCE_EN_MS + 1_000);
     expect(await repo.iniciarPagoDemo(c.numero, "demo")).toEqual({
@@ -81,7 +84,7 @@ describe("cobros", () => {
 
 describe("pago de demo", () => {
   it("pasa por procesando y termina cobrado a los 5 segundos, con trazabilidad", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const c = await repo.crear(50_000, "Ropa");
     await repo.registrarApertura(c.token);
     await repo.registrarApertura(c.token);
@@ -105,9 +108,8 @@ describe("pago de demo", () => {
   });
 
   it("con completarDemo apagado no se confirma solo", async () => {
-    const repo = crearRepoMemoria(Date.now, {
+    const repo = await nuevo(Date.now, {
       completarDemo: false,
-      semilla: false,
     });
     const c = await repo.crear(50_000, "");
     await repo.iniciarPagoDemo(c.numero, "demo");
@@ -116,7 +118,7 @@ describe("pago de demo", () => {
   });
 
   it("no cobra dos veces", async () => {
-    const repo = crearRepoMemoria();
+    const repo = await nuevo();
     const c = await repo.crear(50_000, "");
     expect((await repo.iniciarPagoDemo(c.numero, "demo")).ok).toBe(true);
     expect(await repo.iniciarPagoDemo(c.numero, "demo")).toMatchObject({
@@ -128,9 +130,8 @@ describe("pago de demo", () => {
 
 describe("pago real: transiciones", () => {
   it("esperando -> procesando -> cobrado, cada paso con su evento", async () => {
-    const repo = crearRepoMemoria(Date.now, {
+    const repo = await nuevo(Date.now, {
       completarDemo: false,
-      semilla: false,
     });
     const c = await repo.crear(50_000, "");
     expect(await repo.marcarProcesando(c.numero, "https://op.dev/out/1")).toBe(
@@ -152,9 +153,8 @@ describe("pago real: transiciones", () => {
   });
 
   it("no repite transiciones ni salta estados", async () => {
-    const repo = crearRepoMemoria(Date.now, {
+    const repo = await nuevo(Date.now, {
       completarDemo: false,
-      semilla: false,
     });
     const c = await repo.crear(50_000, "");
     expect(await repo.marcarFallido(c.numero, "x")).toBe(false); // solo desde procesando
@@ -169,9 +169,8 @@ describe("pago real: transiciones", () => {
   });
 
   it("un pago que no llega queda fallido y deja constancia", async () => {
-    const repo = crearRepoMemoria(Date.now, {
+    const repo = await nuevo(Date.now, {
       completarDemo: false,
-      semilla: false,
     });
     const c = await repo.crear(50_000, "");
     await repo.marcarProcesando(c.numero, "https://op.dev/out/1");
@@ -185,9 +184,8 @@ describe("pago real: transiciones", () => {
   });
 
   it("busca por id y por código", async () => {
-    const repo = crearRepoMemoria(Date.now, {
+    const repo = await nuevo(Date.now, {
       completarDemo: false,
-      semilla: false,
     });
     const c = await repo.crear(50_000, "");
     expect((await repo.obtenerPorId(c.id))?.numero).toBe(c.numero);
@@ -213,9 +211,8 @@ describe("limitador", () => {
 describe("totalCobradoDelAnio", () => {
   it("suma solo lo cobrado dentro del año, en hora de Colombia", async () => {
     let t = Date.UTC(2026, 11, 31, 14); // 31 dic 2026, 09:00 en Bogotá
-    const repo = crearRepoMemoria(() => t, {
+    const repo = await nuevo(() => t, {
       completarDemo: false,
-      semilla: false,
     });
     const a = await repo.crear(10_000, "");
     await repo.crear(7_000, ""); // sigue esperando: no cuenta
@@ -230,82 +227,127 @@ describe("totalCobradoDelAnio", () => {
   });
 });
 
-describe("cuenta del comercio", () => {
-  const sinSemilla = { completarDemo: false, semilla: false };
-
-  it("sabe desde cuándo existe el comercio (incluye los cobros de ejemplo)", async () => {
-    const t = Date.parse("2026-10-17T15:00:00.000Z");
-    const vacio = crearRepoMemoria(() => t, sinSemilla);
-    expect((await vacio.perfil()).creadoEn).toBe(new Date(t).toISOString());
-    const conSemilla = crearRepoMemoria(() => t, {
-      completarDemo: false,
-      semilla: true,
-    });
-    const desde = Date.parse((await conSemilla.perfil()).creadoEn);
-    const cobros = await conSemilla.listar();
-    expect(desde).toBe(Math.min(...cobros.map((c) => Date.parse(c.creadoEn))));
+describe("cuentas y aislamiento entre comercios", () => {
+  const cuenta = (usuario: string, comercio = "Tienda") => ({
+    usuario,
+    comercio,
+    passwordHash: "scrypt$a$b",
+    wallet: "https://wallet.test/rosa",
   });
 
-  it("al principio no hay cuenta y los cobros de ejemplo no cuentan", async () => {
-    const repo = crearRepoMemoria(Date.now, {
-      completarDemo: true,
-      semilla: true,
-    });
+  it("sabe desde cuándo existe el comercio", async () => {
+    const t = Date.parse("2026-10-17T15:00:00.000Z");
+    const repo = atado(crearRepoMemoria(() => t, { completarDemo: false }));
+    expect((await repo.perfil())?.creadoEn).toBe(new Date(t).toISOString());
+  });
+
+  it("un invitado empieza sin cuenta y cuenta sus cobros", async () => {
+    const repo = await nuevo();
     expect(await repo.perfil()).toMatchObject({
       registrado: false,
       cobrosCreados: 0,
       limite: 5,
     });
     await repo.crear(1_000, "");
-    expect((await repo.perfil()).cobrosCreados).toBe(1);
+    expect((await repo.perfil())?.cobrosCreados).toBe(1);
   });
 
-  it("registrar guarda usuario y comercio, y renombra los cobros ya creados", async () => {
-    const repo = crearRepoMemoria(Date.now, sinSemilla);
-    const antes = await repo.crear(1_000, "");
-    expect(
-      await repo.registrarPerfil({
-        usuario: "rosa",
-        comercio: "Tienda Rosa",
-        passwordHash: "scrypt$a$b",
-      }),
-    ).toBe(true);
-    expect(await repo.perfil()).toMatchObject({
-      registrado: true,
-      usuario: "rosa",
-      comercio: "Tienda Rosa",
+  it("cada comercio ve solo lo suyo", async () => {
+    const base = crearRepoMemoria();
+    const a = await base.crearInvitado();
+    const b = await base.crearInvitado();
+    const deA = await base.crear(a, 1_000, "de A");
+    await base.crear(b, 2_000, "de B");
+    expect((await base.listar(a)).map((c) => c.concepto)).toEqual(["de A"]);
+    expect((await base.listar(b)).map((c) => c.concepto)).toEqual(["de B"]);
+    // Mismo número en otro comercio: no lo encuentra ni lo toca.
+    expect(await base.obtener(b, deA.numero + 0)).toMatchObject({
+      concepto: "de B",
     });
-    expect((await repo.obtener(antes.numero))?.comercio).toBe("Tienda Rosa");
-    expect((await repo.crear(2_000, "")).comercio).toBe("Tienda Rosa");
+    expect(await base.obtenerPorId(deA.id, b)).toBeUndefined();
+    expect(await base.obtenerPorId(deA.id, a)).toBeDefined();
+    expect(await base.marcarCobrado(b, 99, "x")).toBe(false);
   });
 
-  it("no se pisa una cuenta ya registrada", async () => {
-    const repo = crearRepoMemoria(Date.now, sinSemilla);
-    await repo.registrarPerfil({
-      usuario: "rosa",
-      comercio: "Uno",
+  it("los totales, los topes y el certificado se calculan por comercio", async () => {
+    const base = crearRepoMemoria(Date.now, { completarDemo: false });
+    const a = await base.crearInvitado();
+    const b = await base.crearInvitado();
+    const x = await base.crear(a, 10_000, "");
+    await base.marcarCobrado(a, x.numero, "x");
+    const y = await base.crear(b, 3_000, "");
+    await base.marcarCobrado(b, y.numero, "x");
+    expect(await base.totalCobradoDelAnio(a, 2026)).toBe(10_000);
+    expect(await base.totalCobradoDelAnio(b, 2026)).toBe(3_000);
+    expect(await base.resumenCobrado(b, 0, Date.UTC(2027, 0, 1))).toEqual({
+      total: 3_000,
+      cobros: 1,
+    });
+  });
+
+  it("al crear la cuenta, el invitado conserva sus cobros y no cambia de comercio", async () => {
+    const base = crearRepoMemoria();
+    const id = await base.crearInvitado();
+    const antes = await base.crear(id, 1_000, "primero");
+    const r = await base.registrarCuenta({
+      comercioId: id,
+      ...cuenta("Rosa", "Tienda Rosa"),
+    });
+    expect(r).toEqual({ ok: true, comercioId: id });
+    expect(await base.perfil(id)).toMatchObject({
+      registrado: true,
+      usuario: "Rosa",
+      comercio: "Tienda Rosa",
+      wallet: "https://wallet.test/rosa",
+      cobrosCreados: 1,
+    });
+    // Sigue viendo el cobro de antes, con el nombre nuevo, y la numeración sigue.
+    expect((await base.obtener(id, antes.numero))?.comercio).toBe(
+      "Tienda Rosa",
+    );
+    expect((await base.crear(id, 2_000, "")).numero).toBe(antes.numero + 1);
+  });
+
+  it("sin invitado previo nace un comercio nuevo", async () => {
+    const base = crearRepoMemoria();
+    const r = await base.registrarCuenta(cuenta("rosa"));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect((await base.perfil(r.comercioId))?.registrado).toBe(true);
+  });
+
+  it("el usuario es único aunque cambien las mayúsculas, y una cuenta no se pisa", async () => {
+    const base = crearRepoMemoria();
+    expect((await base.registrarCuenta(cuenta("rosa"))).ok).toBe(true);
+    expect(await base.registrarCuenta(cuenta("ROSA"))).toEqual({
+      ok: false,
+      motivo: "usuario_en_uso",
+    });
+    const id = await base.crearInvitado();
+    await base.registrarCuenta({ comercioId: id, ...cuenta("luis") });
+    expect(
+      await base.registrarCuenta({ comercioId: id, ...cuenta("otro") }),
+    ).toEqual({ ok: false, motivo: "ya_registrado" });
+    expect((await base.perfil(id))?.usuario).toBe("luis");
+  });
+
+  it("cuentaDe encuentra al usuario sin importar mayúsculas y no inventa cuentas", async () => {
+    const base = crearRepoMemoria();
+    const r = await base.registrarCuenta(cuenta("Rosa"));
+    expect(await base.cuentaDe("rOSA")).toEqual({
+      comercioId: r.ok ? r.comercioId : "",
       passwordHash: "scrypt$a$b",
     });
-    expect(
-      await repo.registrarPerfil({
-        usuario: "otro",
-        comercio: "Dos",
-        passwordHash: "scrypt$c$d",
-      }),
-    ).toBe(false);
-    expect(await repo.perfil()).toMatchObject({
-      usuario: "rosa",
-      comercio: "Uno",
-    });
+    expect(await base.cuentaDe("nadie")).toBeUndefined();
+    const invitado = await base.crearInvitado();
+    expect(await base.perfil(invitado)).toMatchObject({ registrado: false });
   });
 });
 
 describe("resumenCobrado", () => {
   it("suma y cuenta solo lo cobrado dentro del rango", async () => {
     let t = Date.UTC(2026, 9, 10, 15);
-    const repo = crearRepoMemoria(() => t, {
+    const repo = await nuevo(() => t, {
       completarDemo: false,
-      semilla: false,
     });
     const a = await repo.crear(10_000, "");
     await repo.marcarCobrado(a.numero, "x");

@@ -71,7 +71,6 @@ COBROS_STORE=postgres
 COBROS_RAIL=open-payments
 APP_BASE_URL=https://your-domain.example
 CONFIRMACION_SECRETO=<64 hex characters, see docs/OPEN-PAYMENTS.md>
-VENDEDOR_PIN=<at least 8 characters: the seller's password to create and see charges>
 OPEN_PAYMENTS_CLIENT_WALLET_URL=https://ilp.interledger-test.dev/your-wallet
 OPEN_PAYMENTS_KEY_ID=<key id registered in the wallet>
 OPEN_PAYMENTS_PRIVATE_KEY_PATH=/run/secrets/open_payments.key

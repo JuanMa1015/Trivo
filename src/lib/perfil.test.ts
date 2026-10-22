@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { cobrosRestantes, mesDeInicio, registroSchema } from "./perfil";
+import {
+  accesoSchema,
+  cobrosRestantes,
+  mesDeInicio,
+  registroSchema,
+} from "./perfil";
 
 const valido = {
   usuario: "doña.rosa",
   comercio: "Tienda Rosa",
   password: "clave-larga-1",
+  wallet: "https://ilp.interledger-test.dev/rosa",
 };
 
 describe("registroSchema", () => {
@@ -19,6 +25,7 @@ describe("registroSchema", () => {
     ["comercio muy corto", { comercio: "A" }],
     ["contraseña corta", { password: "corta" }],
     ["contraseña enorme", { password: "x".repeat(101) }],
+    ["sin wallet", { wallet: "" }],
   ])("rechaza %s", (_, cambio) => {
     expect(registroSchema.safeParse({ ...valido, ...cambio }).success).toBe(
       false,
@@ -30,12 +37,36 @@ describe("registroSchema", () => {
       usuario: "  rosa  ",
       comercio: "  Tienda Rosa ",
       password: " con espacios ",
+      wallet: " https://ilp.interledger-test.dev/rosa ",
     });
     expect(r).toMatchObject({
       usuario: "rosa",
+      wallet: "https://ilp.interledger-test.dev/rosa",
       comercio: "Tienda Rosa",
       password: " con espacios ",
     });
+  });
+});
+
+describe("usuario", () => {
+  it("se guarda en minúsculas, para que Rosa y rosa sean la misma cuenta", () => {
+    expect(
+      registroSchema.parse({ ...valido, usuario: "Doña.ROSA" }).usuario,
+    ).toBe("doña.rosa");
+  });
+});
+
+describe("accesoSchema", () => {
+  it("pide usuario y contraseña", () => {
+    expect(
+      accesoSchema.safeParse({ usuario: "rosa", password: "x" }).success,
+    ).toBe(true);
+    expect(accesoSchema.safeParse({ usuario: "", password: "x" }).success).toBe(
+      false,
+    );
+    expect(
+      accesoSchema.safeParse({ usuario: "rosa", password: "" }).success,
+    ).toBe(false);
   });
 });
 
